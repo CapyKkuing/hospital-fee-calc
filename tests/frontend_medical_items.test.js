@@ -66,4 +66,19 @@ const aliasHarness = createDatabaseHarness(
 aliasHarness.setAliases(new Map([['PR_TR09', ['중심정맥']]]));
 assert.deepStrictEqual(aliasHarness.getMedicalItemDatabase()[0].keywords, ['중심정맥'], '완료된 별칭이 기존 공식 코드 검색어에 병합되어야 합니다.');
 
+const exactAliasStart = script.lastIndexOf('function getExactApprovedAliasCodes');
+const activeSearchStart = script.lastIndexOf('function performSearch');
+assert(exactAliasStart >= 0 && activeSearchStart > exactAliasStart, '정확 승인 별칭 판별 함수가 최종 검색 함수 앞에 있어야 합니다.');
+const exactAliasEnd = script.indexOf('function performSearch', exactAliasStart);
+const exactAliasSource = script.slice(exactAliasStart, exactAliasEnd);
+const exactAliasHarness = new Function('approvedSearchAliases', `${exactAliasSource}\nreturn getExactApprovedAliasCodes;`)(
+    new Map([
+        ['FEE_HA456', ['디스크', '허리디스크 ct']],
+        ['FEE_D5841', ['디스크확산법']]
+    ])
+);
+assert.deepStrictEqual([...exactAliasHarness('디 스 크')], ['FEE_HA456'], '공백 변형도 정확 승인 별칭 코드만 선택해야 합니다.');
+assert.deepStrictEqual([...exactAliasHarness('디스크확산법')], ['FEE_D5841'], '다른 정확 별칭은 해당 코드만 선택해야 합니다.');
+assert(script.slice(activeSearchStart).includes('matched = matched.filter(item => exactApprovedCodes.has(item.code));'), '최종 검색은 정확 승인 별칭 코드만 남겨야 합니다.');
+
 console.log('PASS: 관리자 실제 항목 입력 및 공개 DB 오버레이 계약');
