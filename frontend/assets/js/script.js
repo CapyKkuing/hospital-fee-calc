@@ -4725,6 +4725,14 @@ function eofRenderItemResults(query, targetGroup, items) {
     el.results.classList.remove('hidden');
 }
 
+function getExactApprovedAliasCodes(query) {
+    const normalizedQuery = String(query || '').toLowerCase().replace(/\s+/g, '');
+    if (!normalizedQuery) return new Set();
+    return new Set([...approvedSearchAliases.entries()]
+        .filter(([, aliases]) => aliases.some(alias => String(alias || '').toLowerCase().replace(/\s+/g, '') === normalizedQuery))
+        .map(([code]) => code));
+}
+
 function performSearch(query, targetGroup = 'scoped', options = {}) {
     const clean = String(query || '').trim();
     if (!clean) return;
@@ -5100,6 +5108,10 @@ function performSearch(query, targetGroup = 'scoped', options = {}) {
     let matched = estimates.concat(database.filter(item =>
         !estimateCodes.has(item.code) && isMatch(clean, item) && !isEmergencyManagementItem(item)
     ));
+    const exactApprovedCodes = getExactApprovedAliasCodes(clean);
+    if (exactApprovedCodes.size) {
+        matched = matched.filter(item => exactApprovedCodes.has(item.code));
+    }
     if (targetGroup !== 'global') {
         const scope = getScopedSearchFilters();
         if (!scope.main) {
