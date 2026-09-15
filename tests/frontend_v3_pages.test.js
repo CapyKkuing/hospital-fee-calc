@@ -164,6 +164,19 @@ test('필수 안내 페이지는 현재 위치를 탐색 메뉴에 표시한다'
     }
 });
 
+test('홈은 사이트맵의 모든 공개 clean URL을 직접 연결하고 legacy HTML 링크를 만들지 않는다', () => {
+    const sitemap = readPage('sitemap.xml');
+    const home = readPage('index.html');
+    const publicHtml = [...pages, ...seoPages.map(([name]) => name)].map(readPage).join('\n');
+    const sitemapUrls = [...sitemap.matchAll(/<loc>https:\/\/hospital-fee-calc\.pages\.dev(\/[^<]*)?<\/loc>/g)]
+        .map(([, pathname]) => pathname || '/');
+
+    for (const pathname of sitemapUrls.filter((pathname) => pathname !== '/')) {
+        assert.match(home, new RegExp(`href="${pathname.replaceAll('-', '\\-')}"`), pathname);
+    }
+    assert.doesNotMatch(publicHtml, /href="(?:\/)?(?:about|contact|data-sources|privacy)\.html(?:[#?"])/);
+});
+
 test('공개 페이지 canonical은 운영 clean URL과 일치한다', () => {
     const supportPages = [
         ['about.html', 'about'],
