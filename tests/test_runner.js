@@ -72,6 +72,7 @@ global.document = {
     })
 };
 window.MedicalEstimator = require(path.join(__dirname, '..', 'frontend', 'assets', 'js', 'medical-estimator.js'));
+eval(fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'js', 'fee_schedule_items.js'), 'utf8'));
 global.alert = (msg) => {
     console.log(`[ALERT 모크] ${msg}`);
 };
@@ -149,6 +150,11 @@ assert(isMatch("ㅅ 네ㅑㅜㄷ", HIRA_DATABASE.find(item => item.code === "IM_
 assert(isMatch("x ray", HIRA_DATABASE.find(item => item.code === "IM_XR01")), "'x ray' 검색어로 흉부 X-ray 매칭 성공");
 assert(isMatch("노 ct", HIRA_DATABASE.find(item => item.code === "IM_CT01")), "'노 ct' 오타 검색어로 뇌 CT 매칭 성공");
 assert(isMatch("하반시마취", HIRA_DATABASE.find(item => item.code === "PR_AN04")), "'하반시마취' 오타 검색어로 척추마취 매칭 성공");
+const naturalDeliveryResults = getMedicalItemDatabase()
+    .filter(item => isMatch('자연분만', item) && /^FEE_R435[16]$/.test(item.code))
+    .map(item => item.code).sort();
+assert(JSON.stringify(naturalDeliveryResults) === JSON.stringify(['FEE_R4351', 'FEE_R4356']),
+    '자연분만 검색에 초산·경산 제1태아 공식 코드 모두 표시');
 
 // ==========================================
 // 테스트 시나리오 4: 진료비 계산 (calculate) 로직 검증
@@ -166,16 +172,16 @@ console.log("\n--- 시나리오 4: 예상 병원비 계산 로직 검증 ---");
 // 뇌 MRI는 비급여이므로, 급여 검사는 흉부 CT(150,000원), 위내시경(50,000원), CBC(5,000원) 3개.
 // 단가 내림차순: 흉부 CT (150,000) -> 위내시경 (50,000) -> CBC (5,000)
 // 감산 적용: 흉부 CT(100% = 150,000원), 위내시경(50% = 25,000원), CBC(50% = 2,500원)
-// 종별 가산(상급종합병원 = 30% 가산):
-//   - 흉부 CT: 150,000 * 1.3 = 195,000원
-//   - 위내시경: 25,000 * 1.3 = 32,500원
-//   - CBC: 2,500 * 1.3 = 3,250원
+// 종별 가산(2026년 상급종합병원 = 15% 가산):
+//   - 흉부 CT: 150,000 * 1.15 = 172,500원
+//   - 위내시경: 25,000 * 1.15 = 28,750원
+//   - CBC: 2,500 * 1.15 = 2,875원
 //   - 기본진찰료: 23,000원 (종별 가산 없음)
-// 급여 총액 = 23,000 + 195,000 + 32,500 + 3,250 = 253,750원.
+// 급여 총액 = 23,000 + 172,500 + 28,750 + 2,875 = 227,125원.
 // 외래 환자 본인부담 비율(상급종합병원 = 60%):
-//   - 급여 본인부담금 = 253,750 * 0.6 = 152,250원.
+//   - 급여 본인부담금 = 227,125 * 0.6 = 136,275원.
 // 비급여 총액 = 뇌 MRI 500,000원 (가산/감산 없음, 본인부담 100%).
-// 환자 실부담 총액 (실비 제외) = 152,250 + 500,000 = 652,250원.
+// 환자 실부담 총액 (실비 제외) = 136,275 + 500,000 = 636,275원.
 
 // addedTests 배열 초기화 및 모의 데이터 추가
 addedTests = [
@@ -218,10 +224,8 @@ calculate();
 console.log(`  [결과값] 예상 청구 총액: ${domResults['display_total_cost']}원`);
 console.log(`  [결과값] 환자 최종부담: ${domResults['display_final_cost']}원`);
 
-// 급여 본인부담(152,250) + 비급여(500,000) = 652,250원이어야 함.
-// 기본 진찰료 본인부담(23,000 * 0.6 = 13,800) + 흉부 CT(150,000 * 1.3 * 0.6 = 117,000) + 위내시경(25,000 * 1.3 * 0.6 = 19,500) + CBC(2,500 * 1.3 * 0.6 = 1,950) = 152,250.
-// 따라서 최종 본인부담금은 652,250원이 되어야 함.
-assert(domResults['display_final_cost'] === "652,250", "상급종합병원 외래 검사 4종(감산/가산 포함) 계산 정합성 검증");
+// 급여 본인부담(136,275) + 비급여(500,000) = 636,275원이어야 함.
+assert(domResults['display_final_cost'] === "636,275", "상급종합병원 외래 검사 4종(감산/2026년 가산 포함) 계산 정합성 검증");
 
 
 // ==========================================
@@ -247,7 +251,98 @@ addedProcedures = [];
 calculate();
 
 console.log(`  [결과값] 제왕절개 수술비 포함 최종부담: ${domResults['display_final_cost']}원`);
-assert(domResults['display_final_cost'] === "199,482", "제왕절개 수술비 0%와 선택한 공식 마취·주사·처치 포함 계산 검증 완료");
+assert(domResults['display_final_cost'] === "186,882", "제왕절개 수술비 0%와 기존 추정 마취·주사·처치 포함 계산 회귀 검증");
+
+// ==========================================
+// 테스트 시나리오 6: 자연분만 입원 급여 수가코드만 계산
+// ==========================================
+console.log("\n--- 시나리오 6: 자연분만 종별가산·식대·청구 일수 검증 ---");
+const deliveryInputs = {
+    nonbenefit_region: '11', room_type: 'standard', stay_days: '3',
+    delivery_room_beds: '4', delivery_fetus_count: '1',
+    delivery_maternal_meal_count: '7', delivery_maternal_meal_code: 'Y6300',
+    delivery_general_meal_count: '0', delivery_general_meal_code: '',
+    delivery_direct_meal_addon_count: '0', delivery_nutritionist_addon_count: '0',
+    delivery_cook_addon_count: '0', delivery_room_fee_code: '', delivery_room_total_patient_pay: ''
+};
+let deliveryHospitalClass = 'hospital';
+let deliveryTreatmentType = 'inpatient';
+document.querySelector = selector => {
+    if (selector === 'input[name="hospital_class"]:checked') return { value: deliveryHospitalClass };
+    if (selector === 'input[name="treatment_type"]:checked') return { value: deliveryTreatmentType };
+    return null;
+};
+document.getElementById = id => ({
+    get value() { return deliveryInputs[id] ?? ''; },
+    set value(value) { deliveryInputs[id] = value; },
+    set innerText(value) { domResults[id] = value; },
+    set textContent(value) { domResults[id] = value; },
+    get checked() { return false; },
+    classList: { add: () => {}, remove: () => {}, toggle: () => {} },
+    replaceChildren: () => {}, appendChild: () => {}, innerHTML: ''
+});
+addedTests = [];
+addedProcedures = [];
+addedSurgeries = [{
+    id: 1, type: 'FEE_R4351', typeName: '정상분만(초산)-제1태아',
+    clinicPrice: 818650, hospitalPrice: 717600, basePrice: 717600,
+    isBenefit: true, alreadyPricedByProvider: true
+}];
+const deliveryThreeDays = calculate();
+assert(deliveryThreeDays.finalCost === 22890, '분만 급여 0원 + Y6300 7식 식대 50% + 4인실 급여 입원료 부담 0원');
+assert(deliveryThreeDays.providerAddOn === 35880, '병원 종별가산 5%는 진료비에 포함하지만 산모에게 청구하지 않음');
+assert(deliveryThreeDays.knownCoveredGrossFee === 799260, '분만 및 식대 급여코드 공표액 합계');
+assert(domResults['display_final_cost'] === '22,890', '자연분만 화면 합계와 계산 함수 일치');
+deliveryInputs.delivery_fetus_count = '3';
+const deliveryTriplets = calculate();
+assert(deliveryTriplets.grossFee === 2265039 && deliveryTriplets.providerAddOn === 107859,
+    '제2태아부터 1인당 R4353 두 건과 종별가산 소계 1회 반올림');
+assert(deliveryTriplets.finalCost === 22890, '분만 태아 수 증가가 산모 식대 본인부담을 중복하지 않음');
+deliveryInputs.delivery_fetus_count = '1';
+deliveryInputs.stay_days = '1';
+deliveryInputs.delivery_maternal_meal_count = '2';
+const deliveryOneDay = calculate();
+assert(deliveryOneDay.finalCost === 6540, '1일 입원 시 Y6300 2식만 급여 식대로 계산');
+assert(deliveryThreeDays.finalCost - deliveryOneDay.finalCost === 16350, '입원기간별 실제 식사 횟수 변경 반영');
+deliveryInputs.delivery_maternal_meal_count = '7';
+assert(!isCalculationReady(), '1일 입원에 7식 입력 차단');
+deliveryInputs.delivery_maternal_meal_count = '2';
+deliveryHospitalClass = 'clinic';
+deliveryInputs.delivery_maternal_meal_code = 'Y6400';
+const deliveryClinic = calculate();
+assert(deliveryClinic.grossFee === 818650 && deliveryClinic.providerAddOn === 0, '의원 수가와 가산 0% 적용');
+addedSurgeries[0].clinicPrice = 717600;
+assert(calculate().grossFee === 818650, '관리자 오버레이 가격 대신 공식 수가표 단가 사용');
+addedSurgeries.push({ type: 'FEE_R4358', typeName: '정상분만(경산)-제2태아' });
+assert(!isCalculationReady(), '초산 제1태아와 경산 제2태아의 잘못된 조합 차단');
+addedSurgeries.pop();
+addedSurgeries.push({ type: 'FEE_R4353', typeName: '정상분만(초산)-제2태아부터[1인당]' });
+assert(!isCalculationReady(), '단태아에 제2태아 수가 수동 선택 시 차단');
+deliveryInputs.delivery_fetus_count = '2';
+assert(isCalculationReady(), '쌍태아에 일치하는 제2태아 수가 수동 선택 허용');
+deliveryInputs.delivery_fetus_count = '1';
+addedSurgeries.pop();
+addedTests = [{ type: 'FEE_G1234', typeName: '추가 검사' }];
+assert(!isCalculationReady(), '분만 외 선택 검사 누락 가능성을 차단');
+addedTests = [];
+deliveryHospitalClass = 'hospital';
+deliveryInputs.delivery_maternal_meal_code = 'Y6300';
+deliveryInputs.delivery_room_beds = '3';
+deliveryInputs.delivery_room_fee_code = 'AB3N4';
+deliveryInputs.delivery_room_total_patient_pay = '10000';
+assert(calculate().finalCost === 16540, '3인실은 AB 코드와 병원 확인 전체 기간 부담액만 별도 합산');
+deliveryInputs.delivery_room_total_patient_pay = '';
+assert(!isCalculationReady(), '2·3인실은 병원 확인 전체 기간 부담액 없이는 확정하지 않음');
+deliveryInputs.delivery_room_total_patient_pay = '0';
+assert(calculate().finalCost === 6540, '2·3인실의 병원 확인 0원도 허용');
+deliveryInputs.delivery_room_fee_code = '';
+assert(!isCalculationReady(), '2·3인실 AB 코드 누락 차단');
+deliveryInputs.delivery_room_fee_code = 'AB3N4';
+deliveryTreatmentType = 'outpatient';
+assert(!isCalculationReady(), '자연분만을 일반 외래 계산으로 처리하지 않음');
+deliveryTreatmentType = 'inpatient';
+deliveryInputs.delivery_maternal_meal_count = '';
+assert(!isCalculationReady(), '병원 확인 식사 횟수 없이는 결과를 확정하지 않음');
 
 
 console.log(`\n=== 테스트 종료: 성공 ${passCount}건, 실패 ${failCount}건 ===`);

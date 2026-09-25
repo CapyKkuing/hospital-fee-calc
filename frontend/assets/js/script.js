@@ -19,14 +19,14 @@ const DB = {
     /* ---------------------------------------------------
        A. 병원 등급별 기본 세팅
        - 2025년 기준 환산지수: 의원 94.1원, 병원급 이상 82.2원
-       - 종별 가산: 의원 15%, 병원 20%, 종합병원 25%, 상급종합 30%
+       - 제2~10장 행위 종별 가산: 의원 0%, 병원 5%, 종합병원 10%, 상급종합 15%
        - 외래 본인부담: 의원 30%, 병원 40%, 종합 50%, 상급종합 60%
        - 입원 본인부담: 전 등급 20%
      --------------------------------------------------- */
     HOSPITAL_CLASS: {
         clinic: {
             name: "동네 의원",
-            gasanRate: 1.15,
+            gasanRate: 1.00,
             outpatientRate: 0.30,
             inpatientRate: 0.20,
             baseConsult: 17000,
@@ -35,7 +35,7 @@ const DB = {
         },
         hospital: {
             name: "일반 병원",
-            gasanRate: 1.20,
+            gasanRate: 1.05,
             outpatientRate: 0.40,
             inpatientRate: 0.20,
             baseConsult: 19000,
@@ -44,7 +44,7 @@ const DB = {
         },
         general_hospital: {
             name: "종합병원",
-            gasanRate: 1.25,
+            gasanRate: 1.10,
             outpatientRate: 0.50,
             inpatientRate: 0.20,
             baseConsult: 21000,
@@ -53,7 +53,7 @@ const DB = {
         },
         tertiary_hospital: {
             name: "대학병원 (상급종합)",
-            gasanRate: 1.30,
+            gasanRate: 1.15,
             outpatientRate: 0.60,
             inpatientRate: 0.20,
             baseConsult: 23000,
@@ -239,6 +239,11 @@ function applyPublicStatsToItem(item) {
 
 let medicalItemsOverlay = [];
 let approvedSearchAliases = new Map();
+// '자연분만'만으로 초산·경산을 알 수 없으므로 두 제1태아 코드를 함께 제시한다.
+const NATURAL_DELIVERY_SEARCH_ALIASES = new Map([
+    ['FEE_R4351', ['자연분만', '자연분만 초산']],
+    ['FEE_R4356', ['자연분만', '자연분만 경산']]
+]);
 
 function normalizeMedicalItem(item) {
     const code = String(item.code || item.item_code || '');
@@ -297,7 +302,8 @@ function getMedicalItemDatabase() {
     HIRA_DATABASE.concat(publicFeeItems).forEach(item => itemsByCode.set(item.code, item));
     medicalItemsOverlay.forEach(item => itemsByCode.set(item.code, item));
     return Array.from(itemsByCode.values()).map(function(item) {
-        const aliases = approvedSearchAliases.get(item.code) || [];
+        const aliases = (approvedSearchAliases.get(item.code) || [])
+            .concat(NATURAL_DELIVERY_SEARCH_ALIASES.get(item.code) || []);
         if (!aliases.length) return item;
         return { ...item, keywords: Array.from(new Set([...(item.keywords || []), ...aliases])) };
     });
@@ -449,9 +455,91 @@ function getRequiredCalculationSelections() {
     };
 }
 
+const NATURAL_DELIVERY_FEE_CODE = /^FEE_R(?:435[1368]|436[12]|4380)$/;
+
+function getSelectedNaturalDeliveries() {
+    return addedSurgeries.filter(item => NATURAL_DELIVERY_FEE_CODE.test(item.type));
+}
+
+function getNaturalDeliveryPrimaryItems() {
+    return getSelectedNaturalDeliveries().filter(item => !/^FEE_R435[38]$/.test(item.type));
+}
+
+function getOfficialNaturalDeliveryFeeItem(code) {
+    return window.PUBLIC_FEE_SCHEDULE_ITEMS?.items?.find(item => item.code === code) || null;
+}
+
+function hasUncalculatedDeliverySelections() {
+    return addedTests.length > 0 || addedProcedures.length > 0
+        || addedSurgeries.some(item => !NATURAL_DELIVERY_FEE_CODE.test(item.type));
+}
+
+function hasInvalidDeliveryCodeCombination() {
+    const primary = getNaturalDeliveryPrimaryItems()[0]?.type;
+    const secondary = getSelectedNaturalDeliveries().filter(item => /^FEE_R435[38]$/.test(item.type));
+    if (secondary.length > 1) return true;
+    if (!secondary.length) return false;
+    const permitted = primary === 'FEE_R4351' ? 'FEE_R4353'
+        : primary === 'FEE_R4356' ? 'FEE_R4358' : null;
+    return !permitted || secondary.some(item => item.type !== permitted);
+}
+
+function readNonNegativeInteger(id) {
+    const value = document.getElementById(id)?.value;
+    if (value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isSafeInteger(number) && number >= 0 ? number : null;
+}
+
+const DELIVERY_COVERED_INPUT_IDS = [
+    'delivery_fetus_count',
+    'delivery_maternal_meal_count', 'delivery_maternal_meal_code',
+    'delivery_general_meal_count', 'delivery_general_meal_code',
+    'delivery_direct_meal_addon_count', 'delivery_nutritionist_addon_count',
+    'delivery_cook_addon_count', 'delivery_room_fee_code',
+    'delivery_room_total_patient_pay'
+];
+
+function getCoveredDeliveryInputs(hospitalClass, stayDays) {
+    const maternalCount = readNonNegativeInteger('delivery_maternal_meal_count');
+    const generalCount = readNonNegativeInteger('delivery_general_meal_count');
+    const maternalCode = document.getElementById('delivery_maternal_meal_code')?.value || '';
+    const generalCode = document.getElementById('delivery_general_meal_code')?.value || '';
+    const roomBeds = readNonNegativeInteger('delivery_room_beds');
+    const mealLines = [];
+    if (maternalCount > 0) mealLines.push({ code: maternalCode, count: maternalCount });
+    if (generalCount > 0) mealLines.push({ code: generalCode, count: generalCount });
+    const mealAddOns = [
+        ['Z0030', 'delivery_direct_meal_addon_count'],
+        ['Z0010', 'delivery_nutritionist_addon_count'],
+        ['Z0011', 'delivery_cook_addon_count']
+    ].map(([code, id]) => ({ code, count: readNonNegativeInteger(id) || 0 }))
+        .filter(entry => entry.count > 0);
+    return {
+        hospitalClass, stayDays, roomBeds, mealLines, mealAddOns,
+        roomFeeCode: roomBeds < 4 ? document.getElementById('delivery_room_fee_code')?.value?.trim().toUpperCase() : '',
+        roomPatientPayTotal: roomBeds < 4 ? readNonNegativeInteger('delivery_room_total_patient_pay') : 0
+    };
+}
+
+function updateDeliveryDetails() {
+    const panel = document.getElementById('delivery_details');
+    const roomField = document.getElementById('delivery_room_field');
+    const genericRoomField = document.getElementById('generic_room_field');
+    const selected = getSelectedNaturalDeliveries().length > 0;
+    if (!selected && panel?.classList.contains?.('hidden') === false) {
+        DELIVERY_COVERED_INPUT_IDS
+            .forEach(id => { const input = document.getElementById(id); if (input) input.value = ''; });
+        const beds = document.getElementById('delivery_room_beds');
+        if (beds) beds.value = '4';
+    }
+    if (panel) panel.classList.toggle('hidden', !selected);
+    if (genericRoomField) genericRoomField.classList.toggle('hidden', selected);
+    if (roomField) roomField.classList.toggle('hidden', !selected || readNonNegativeInteger('delivery_room_beds') >= 4);
+}
+
 function isCalculationReady() {
-    const selections = getRequiredCalculationSelections();
-    return Boolean(selections.hospitalClass && selections.treatmentType && selections.nonBenefitRegion);
+    return getMissingCalculationLabels().length === 0;
 }
 
 function getMissingCalculationLabels() {
@@ -459,6 +547,61 @@ function getMissingCalculationLabels() {
     const missing = [];
 
     if (!selections.hospitalClass) missing.push('병원 등급');
+    const deliveryItems = getSelectedNaturalDeliveries();
+    if (deliveryItems.length) {
+        if (!window.MedicalEstimator?.estimateNaturalDelivery) missing.push('분만 수가 계산 데이터');
+        if (selections.treatmentType !== 'inpatient') missing.push('분만 입원 치료');
+        const billableDays = readNonNegativeInteger('stay_days');
+        if (billableDays === null || billableDays < 1 || billableDays > 90) missing.push('청구 입원일수(1~90일)');
+        const fetusCount = readNonNegativeInteger('delivery_fetus_count');
+        if (fetusCount === null || fetusCount < 1 || fetusCount > 10) missing.push('실제 태아 수(1~10명)');
+        if (getNaturalDeliveryPrimaryItems().length !== 1) missing.push('초산·경산 중 실제 제1태아 분만 코드 하나');
+        if (hasInvalidDeliveryCodeCombination()) missing.push('제1태아와 초산·경산이 일치하는 제2태아 코드');
+        const primaryCode = getNaturalDeliveryPrimaryItems()[0]?.type;
+        const secondaryCode = primaryCode === 'FEE_R4351' ? 'FEE_R4353'
+            : primaryCode === 'FEE_R4356' ? 'FEE_R4358' : null;
+        if (fetusCount === 1 && deliveryItems.some(item => /^FEE_R435[38]$/.test(item.type))) {
+            missing.push('단태아에는 제2태아 수가를 선택하지 않음');
+        }
+        if (fetusCount > 1 && (!secondaryCode || !getOfficialNaturalDeliveryFeeItem(secondaryCode))) {
+            missing.push('복수 태아에 적용할 공식 제2태아 수가');
+        }
+        if (deliveryItems.some(item => {
+            const fee = getOfficialNaturalDeliveryFeeItem(item.type);
+            return !fee || !Number.isSafeInteger(fee.clinicPrice) || fee.clinicPrice <= 0
+                || !Number.isSafeInteger(fee.hospitalPrice) || fee.hospitalPrice <= 0;
+        })) missing.push('공식 분만 수가표');
+        if (hasUncalculatedDeliverySelections()) missing.push('분만 외 선택 항목 제거');
+        const maternalCount = readNonNegativeInteger('delivery_maternal_meal_count');
+        const generalCount = readNonNegativeInteger('delivery_general_meal_count');
+        if (maternalCount === null || generalCount === null) missing.push('실제 산모식·일반식 횟수(없으면 0)');
+        if (maternalCount > 0 && !/^Y6[1-4]00$/.test(document.getElementById('delivery_maternal_meal_code')?.value || '')) missing.push('산모식 Y6 급여 코드');
+        if (generalCount > 0 && !/^Y2[1-4]00$/.test(document.getElementById('delivery_general_meal_code')?.value || '')) missing.push('일반식 Y2 급여 코드');
+        if ((maternalCount || 0) + (generalCount || 0) > 0) {
+            ['delivery_direct_meal_addon_count', 'delivery_nutritionist_addon_count', 'delivery_cook_addon_count']
+                .forEach(id => { if (readNonNegativeInteger(id) === null) missing.push('식대 가산 적용 횟수(없으면 0)'); });
+        }
+        const roomBeds = readNonNegativeInteger('delivery_room_beds');
+        if (![2, 3, 4, 5, 6].includes(roomBeds)) missing.push('급여 병실 인원');
+        if (roomBeds === 2 || roomBeds === 3) {
+            if (!document.getElementById('delivery_room_fee_code')?.value?.trim()) missing.push('병원 확인 2·3인실 급여 입원료 코드');
+            if (readNonNegativeInteger('delivery_room_total_patient_pay') === null) missing.push('병원 확인 전체 기간 급여 입원료 환자부담액');
+        }
+        if (missing.length === 0) {
+            const official = getOfficialNaturalDeliveryFeeItem(deliveryItems[0].type);
+            try {
+                window.MedicalEstimator.estimateNaturalDelivery({
+                    ...getCoveredDeliveryInputs(selections.hospitalClass, billableDays),
+                    code: deliveryItems[0].type,
+                    clinicPrice: official.clinicPrice,
+                    hospitalPrice: official.hospitalPrice
+                });
+            } catch (error) {
+                missing.push(error.message || '급여 수가 입력 확인');
+            }
+        }
+        return missing;
+    }
     if (!selections.treatmentType) missing.push('진료 형태');
     if (!selections.nonBenefitRegion) missing.push('비급여 기준 지역');
 
@@ -503,11 +646,17 @@ function resetResultView() {
     const insightDrivers = document.getElementById('result-insights-drivers');
 
     if (finalCostEl) finalCostEl.innerText = '0';
+    const finalCostLabel = document.getElementById('final-cost-label');
+    if (finalCostLabel) finalCostLabel.textContent = '최종 예상 환자 실부담금';
     if (totalCostEl) totalCostEl.innerText = '0';
     if (gasanCostEl) gasanCostEl.innerText = '0';
     if (gasanLabelEl) gasanLabelEl.innerText = '병원 등급별 가산율이 급여 항목에 자동 반영됩니다.';
     if (refundCostEl) refundCostEl.innerText = '0';
     if (rangeEl) rangeEl.innerText = '0원 ~ 0원';
+    const rangeLabel = document.getElementById('cost-range-label');
+    if (rangeLabel) rangeLabel.textContent = '대략적인 예상 범위:';
+    const deliveryNote = document.getElementById('delivery-result-note');
+    if (deliveryNote) deliveryNote.classList.add('hidden');
     if (tableBody) tableBody.innerHTML = '<tr><td colspan="3" class="empty-row">필수 조건을 선택하면 세부 산출 내역이 표시됩니다.</td></tr>';
     if (comparisonBody) comparisonBody.innerHTML = '<tr><td colspan="3" class="empty-row">필수 조건을 선택하면 병원 규모별 예상 금액을 확인할 수 있습니다.</td></tr>';
     if (insuranceBox) insuranceBox.classList.add('hidden');
@@ -619,6 +768,14 @@ function markResultStale() {
 }
 
 function handleCalculatorInputChange(event) {
+    if (getSelectedNaturalDeliveries().length && (event?.target?.id === 'delivery_room_beds' || event?.target?.name === 'hospital_class')) {
+        const changedHospital = event.target.name === 'hospital_class';
+        const fields = changedHospital
+            ? DELIVERY_COVERED_INPUT_IDS
+            : ['delivery_room_fee_code', 'delivery_room_total_patient_pay'];
+        fields.forEach(id => { const field = document.getElementById(id); if (field) field.value = ''; });
+        updateDeliveryDetails();
+    }
     if (resultRequested && ['has_insurance', 'insurance_generation'].includes(event?.target?.id)) return;
     markResultStale();
 }
@@ -805,6 +962,7 @@ function toggleTreatmentDetails() {
     } else {
         emergencySection.classList.add('hidden');
     }
+    updateDeliveryDetails();
     calculate();
 }
 
@@ -841,7 +999,15 @@ function adjustDays(amount) {
     if (!input) return;
     let val = parseInt(input.value, 10) || 1;
     val = Math.max(1, Math.min(90, val + amount));
+    if (getSelectedNaturalDeliveries().length && val !== parseInt(input.value, 10)) {
+        ['delivery_maternal_meal_count', 'delivery_general_meal_count',
+            'delivery_direct_meal_addon_count', 'delivery_nutritionist_addon_count',
+            'delivery_cook_addon_count', 'delivery_room_fee_code', 'delivery_room_total_patient_pay']
+            .forEach(id => { const field = document.getElementById(id); if (field) field.value = ''; });
+        markResultStale();
+    }
     input.value = val;
+    updateDeliveryDetails();
     calculate();
 }
 
@@ -2637,7 +2803,8 @@ onDocumentReady(bindAnesthesiaDialog);
 
 /** 실시간 검색된 심평원 수가 아이템을 기존 계산기 데이터 구조에 분기 추가 */
 function addHiraItem(item) {
-    item = applyPublicStatsToItem(item);
+    // 분만은 연도별 행위 수가를 사용한다. 2024년 전체 청구 평균으로 단가를 덮지 않는다.
+    if (!NATURAL_DELIVERY_FEE_CODE.test(item.code)) item = applyPublicStatsToItem(item);
 
     const categoryNames = {
         imaging: '영상검사',
@@ -2654,7 +2821,8 @@ function addHiraItem(item) {
             alert("이미 등록된 수술/시술 항목입니다.");
             return;
         }
-        if (!item.anesthesiaSelectionConfirmed && openAnesthesiaDialog(item)) return;
+        if (!NATURAL_DELIVERY_FEE_CODE.test(item.code)
+            && !item.anesthesiaSelectionConfirmed && openAnesthesiaDialog(item)) return;
         surgeryIdCounter++;
         addedSurgeries.push({
             id: surgeryIdCounter,
@@ -2663,6 +2831,8 @@ function addHiraItem(item) {
             type: item.code,
             typeName: item.name,
             basePrice: resolveProviderPrice(item),
+            clinicPrice: Number(item.clinicPrice || 0),
+            hospitalPrice: Number(item.hospitalPrice || 0),
             publicStatsSource: item.publicStatsSource || '',
             publicFeeScheduleSource: item.publicFeeScheduleSource || '',
             alreadyPricedByProvider: Boolean(item.alreadyPricedByProvider),
@@ -2747,6 +2917,7 @@ function addHiraItem(item) {
 /** 추가된 모든 검사, 수술, 처치 항목을 #added_items_unified_list에 단일 칩 카드로 렌더링 */
 function renderAddedItems() {
     const unifiedList = document.getElementById('added_items_unified_list');
+    updateDeliveryDetails();
     if (!unifiedList) return;
 
     unifiedList.innerHTML = '';
@@ -3055,12 +3226,121 @@ function renderComparisonTable(currentClass) {
 // =========================================================
 // 8. 핵심 계산 엔진 (종별가산, 본인부담금, 실비 환급 계산 및 명세서 렌더링)
 // =========================================================
+function calculateNaturalDelivery() {
+    const hospitalClass = document.querySelector('input[name="hospital_class"]:checked').value;
+    const selectedItems = getSelectedNaturalDeliveries();
+    const stayDays = Number(document.getElementById('stay_days').value);
+    const fetusCount = readNonNegativeInteger('delivery_fetus_count');
+    const primary = getNaturalDeliveryPrimaryItems()[0];
+    const secondaryCode = primary.type === 'FEE_R4351' ? 'FEE_R4353'
+        : primary.type === 'FEE_R4356' ? 'FEE_R4358' : null;
+    const selectedSecondary = selectedItems.find(item => item.type === secondaryCode);
+    const officialSecondary = secondaryCode && getOfficialNaturalDeliveryFeeItem(secondaryCode);
+    const secondary = selectedSecondary || (officialSecondary && {
+        type: secondaryCode, typeName: officialSecondary.name
+    });
+    const deliveryItems = [primary];
+    for (let index = 1; index < fetusCount; index++) deliveryItems.push(secondary);
+    const actuals = getCoveredDeliveryInputs(hospitalClass, stayDays);
+    const feeFor = item => {
+        const official = getOfficialNaturalDeliveryFeeItem(item.type);
+        return window.MedicalEstimator.estimateNaturalDelivery({
+            ...actuals,
+            code: item.type,
+            clinicPrice: official.clinicPrice,
+            hospitalPrice: official.hospitalPrice,
+            mealLines: item === primary ? actuals.mealLines : [],
+            mealAddOns: item === primary ? actuals.mealAddOns : [],
+            roomPatientPayTotal: item === primary ? actuals.roomPatientPayTotal : 0
+        });
+    };
+    const fees = deliveryItems.map(item => ({ item, fee: feeFor(item) }));
+    // 종별가산은 청구 행위별 반올림 금액의 합이 아닌 가산대상 행위금액 소계에 적용한다.
+    // 명세서 전체 10원 미만 절사는 모든 청구항목이 없으므로 여기서 임의 적용하지 않는다.
+    const deliveryBaseSubtotal = fees.reduce((sum, entry) => sum + entry.fee.unitPrice, 0);
+    const addOn = Math.round(deliveryBaseSubtotal * fees[0].fee.providerAddOnRate);
+    const grossFee = deliveryBaseSubtotal + addOn;
+    const patientPay = fees.reduce((sum, entry) => sum + entry.fee.totalPatientPay, 0);
+    const primaryFee = fees.find(entry => entry.item === primary).fee;
+    const knownCoveredGrossFee = grossFee + primaryFee.mealGrossFee;
+    const hData = DB.HOSPITAL_CLASS[hospitalClass];
+
+    document.getElementById('display_total_cost').innerText = formatNumber(patientPay);
+    document.getElementById('display_final_cost').innerText = formatNumber(patientPay);
+    const finalCostLabel = document.getElementById('final-cost-label');
+    if (finalCostLabel) finalCostLabel.textContent = '선택한 급여코드의 산모 환자 부담 합계';
+    document.getElementById('display_refund_cost').innerText = '0';
+    document.getElementById('display_gasan_cost').innerText = formatNumber(addOn);
+    document.getElementById('display_gasan_label').innerText = `${hData.name} 분만 수가에 종별가산 ${Math.round(primaryFee.providerAddOnRate * 100)}% 포함 · 분만 급여 환자부담 0원`;
+    document.getElementById('display_cost_range').innerText = `${formatNumber(patientPay)}원 (코드 확인 항목 합계)`;
+    const rangeLabel = document.getElementById('cost-range-label');
+    if (rangeLabel) rangeLabel.textContent = '급여 코드 확인 항목 합계:';
+    document.getElementById('result_insurance_box')?.classList.add('hidden');
+    document.getElementById('drg-notice')?.classList.add('hidden');
+    document.getElementById('sanjeong-notice')?.classList.add('hidden');
+
+    const note = document.getElementById('delivery-result-note');
+    if (note) {
+        note.textContent = `선택한 분만·식대 급여 항목의 명세서 전체 조정 전 부분합계 ${formatNumber(knownCoveredGrossFee)}원 중 분만 수가 ${formatNumber(grossFee)}원(종별가산 ${formatNumber(addOn)}원 포함)은 환자 부담금이 아닙니다. `
+            + `분만 기본코드는 ${window.PUBLIC_FEE_SCHEDULE_ITEMS.sourceDate} 자료와 2026-09-01 전체판에서 같은 단가임을 확인했습니다. 식대는 선택한 Y·Z 급여코드의 총액에 50%를 적용한 뒤 10원 미만을 절사했습니다. `
+            + (primaryFee.roomBeds >= 4
+                ? '분만 관련 4인실 이상 급여 입원료 환자부담은 0원이며, 병원별 AB 코드·입원료 청구 총액은 확정하지 않았습니다. '
+                : `2·3인실은 병원이 확인한 ${primaryFee.roomFeeCode} 급여 입원료 환자부담 총액을 별도로 더했습니다. `)
+            + '다른 급여 항목·비급여·신생아 진료비는 포함하지 않았으며 실제 영수증 총액이 아닙니다.';
+        note.classList.remove('hidden');
+    }
+
+    const rows = [{
+        name: `${primary.typeName} (${primary.type}) · 분만 급여 본인부담 없음`,
+        type: 'benefit', price: 0
+    }];
+    if (fetusCount > 1) rows.push({
+        name: `${secondary.typeName} (${secondary.type}) × ${fetusCount - 1}명 · 제2태아부터 1인당 · 분만 급여 본인부담 없음`,
+        type: 'benefit', price: 0
+    });
+    primaryFee.mealComponents.forEach(component => rows.push({
+        name: `${component.code} ${component.label} · ${component.count}회 × ${formatNumber(component.unitPrice)}원 · 식대 전체 50%·끝수처리 배분액`,
+        type: 'benefit', price: component.patientPay
+    }));
+    if (primaryFee.roomBeds <= 3) rows.push({
+        name: `${primaryFee.roomFeeCode} 2·3인실 급여 입원료 · 병원 확인 전체 기간 (${stayDays}일)`,
+        type: 'benefit', price: primaryFee.roomPatientPay
+    });
+    const tableBody = document.getElementById('cost-table-body');
+    tableBody.replaceChildren(...rows.map(item => {
+        const row = document.createElement('tr');
+        const name = document.createElement('td');
+        const type = document.createElement('td');
+        const price = document.createElement('td');
+        name.textContent = item.name;
+        type.textContent = '급여';
+        price.className = 'text-right';
+        price.textContent = `${formatNumber(item.price)}원`;
+        row.append(name, type, price);
+        return row;
+    }));
+    const comparison = document.getElementById('comparison-table-body');
+    if (comparison) comparison.innerHTML = '<tr><td colspan="3">식대·병실 청구코드와 실제 횟수가 달라 기관 간 자동 비교하지 않습니다.</td></tr>';
+    const insights = document.getElementById('result-insights');
+    const summary = document.getElementById('result-insights-summary');
+    const drivers = document.getElementById('result-insights-drivers');
+    if (insights && summary && drivers) {
+        summary.textContent = `태아 ${fetusCount}명 자연분만 급여 본인부담 0원, 급여 식대 ${primaryFee.mealCount}식의 50%, 청구 입원일수 ${stayDays}일 기준입니다. 다른 진료비는 포함하지 않았습니다.`;
+        drivers.replaceChildren();
+        insights.hidden = false;
+    }
+    updateResultButtonState();
+    return { finalCost: patientPay, grossFee, knownCoveredGrossFee, providerAddOn: addOn, verifiedCodesOnly: true };
+}
+
 function calculate() {
     updateResultButtonState();
     if (!resultRequested || !isCalculationReady()) {
         resetResultView();
         return null;
     }
+
+    if (getSelectedNaturalDeliveries().length) return calculateNaturalDelivery();
 
     // [1] 입력 폼 요소 값 획득 및 맵핑
     const hospitalClass = document.querySelector('input[name="hospital_class"]:checked').value;
@@ -3318,7 +3598,9 @@ function calculate() {
     const gasanLabelEl = document.getElementById('display_gasan_label');
     const gasanInfo = getHospitalGasanInfo(hData);
     if (gasanCostEl) gasanCostEl.innerText = formatNumber(gasanPatientPay);
-    if (gasanLabelEl) gasanLabelEl.innerText = `${gasanInfo.label}를 급여 검사·시술·수술과 자동 산정 항목에 포함했습니다.`;
+    if (gasanLabelEl) gasanLabelEl.innerText = gasanInfo.ratePercent > 0
+        ? `${gasanInfo.label}를 급여 검사·시술·수술과 자동 산정 항목에 포함했습니다.`
+        : `${hData.name}은 종별가산이 적용되지 않습니다.`;
     document.getElementById('display_refund_cost').innerText = formatNumber(refundTotal);
     document.getElementById('display_final_cost').innerText = formatNumber(finalPatientPay);
     document.getElementById('display_cost_range').innerText = `${formatNumber(minRange)}원 ~ ${formatNumber(maxRange)}원`;

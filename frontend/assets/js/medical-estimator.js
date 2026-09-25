@@ -4,6 +4,52 @@
     if (root) root.MedicalEstimator = api;
 }(typeof globalThis === 'undefined' ? this : globalThis, function () {
     const SOURCE_DATE = '2026-07-01';
+    // 2026 행위 급여 상대가치점수 제1부 II: 제2~10장 행위의 요양기관 종별가산.
+    const PROVIDER_ADD_ON_RATES = Object.freeze({
+        clinic: 0,
+        hospital: 0.05,
+        general_hospital: 0.10,
+        tertiary_hospital: 0.15
+    });
+    const NATURAL_DELIVERY_CODES = new Set([
+        'FEE_R4351', 'FEE_R4353', 'FEE_R4356', 'FEE_R4358',
+        'FEE_R4361', 'FEE_R4362', 'FEE_R4380'
+    ]);
+    // 2026 건강보험요양급여비용 제1편: 기본식사(일반식·산모식) 및 식사가산.
+    const COVERED_MEAL_FEES = Object.freeze({
+        Y2100: Object.freeze({ label: '일반식(상급종합병원)', unitPrice: 5660, kind: 'general', provider: 'tertiary_hospital' }),
+        Y2200: Object.freeze({ label: '일반식(종합병원)', unitPrice: 5410, kind: 'general', provider: 'general_hospital' }),
+        Y2300: Object.freeze({ label: '일반식(병원)', unitPrice: 5150, kind: 'general', provider: 'hospital' }),
+        Y2400: Object.freeze({ label: '일반식(의원)', unitPrice: 4710, kind: 'general', provider: 'clinic' }),
+        Y6100: Object.freeze({ label: '산모식(상급종합병원)', unitPrice: 7380, kind: 'maternal', provider: 'tertiary_hospital' }),
+        Y6200: Object.freeze({ label: '산모식(종합병원)', unitPrice: 6940, kind: 'maternal', provider: 'general_hospital' }),
+        Y6300: Object.freeze({ label: '산모식(병원)', unitPrice: 6540, kind: 'maternal', provider: 'hospital' }),
+        Y6400: Object.freeze({ label: '산모식(의원)', unitPrice: 6540, kind: 'maternal', provider: 'clinic' })
+    });
+    const COVERED_MEAL_ADD_ONS = Object.freeze({
+        Z0010: Object.freeze({ label: '영양사 가산', unitPrice: 650, bound: 'general' }),
+        Z0011: Object.freeze({ label: '조리사 가산', unitPrice: 600, bound: 'general' }),
+        Z0030: Object.freeze({ label: '직영 가산', unitPrice: 240, bound: 'total' })
+    });
+    const PROVIDER_ROOM_PREFIXES = Object.freeze({
+        tertiary_hospital: 'AB1', general_hospital: 'AB2', hospital: 'AB3', clinic: 'AB4'
+    });
+    const ROOM_BED_LETTERS = Object.freeze({ 2: 'S', 3: 'N', 4: 'J', 5: 'E', 6: 'A' });
+    // 2026-09-01 HIRA 급여 수가 XLSX의 2·3인실 기본코드만 허용한다.
+    const COVERED_TWO_THREE_BED_ROOM_CODES = Object.freeze({
+        2: new Set([
+            'AB1S0', 'AB1S1', 'AB1S2', 'AB1S3', 'AB1S9', 'AB1SS',
+            'AB2S0', 'AB2S1', 'AB2S2', 'AB2S3', 'AB2S4', 'AB2S9', 'AB2SA', 'AB2SS',
+            'AB3S0', 'AB3S1', 'AB3S2', 'AB3S3', 'AB3S4', 'AB3S5', 'AB3S9', 'AB3SA',
+            'AB2T5', 'AB2U5', 'AB2V5', 'AB3T6', 'AB3U6', 'AB3V6'
+        ]),
+        3: new Set([
+            'AB1N0', 'AB1N1', 'AB1N2', 'AB1N3', 'AB1N9', 'AB1NS',
+            'AB2N0', 'AB2N1', 'AB2N2', 'AB2N3', 'AB2N4', 'AB2N9', 'AB2NA', 'AB2NS',
+            'AB3N0', 'AB3N1', 'AB3N2', 'AB3N3', 'AB3N4', 'AB3N5', 'AB3N9', 'AB3NA',
+            'AB2P5', 'AB2Q5', 'AB2R5', 'AB3P6', 'AB3Q6', 'AB3R6'
+        ])
+    });
     const ANESTHESIA_FEES = Object.freeze({
         L0103: { clinic: 124350, hospital: 109000 },
         L0104: { clinic: 27980, hospital: 24520 },
@@ -60,6 +106,192 @@
 
     function providerKey(provider) {
         return provider === 'clinic' ? 'clinic' : 'hospital';
+    }
+
+    function isNaturalDeliveryCode(code) {
+        return NATURAL_DELIVERY_CODES.has(String(code || '').toUpperCase());
+    }
+
+    function estimateNaturalDelivery(input) {
+        if (!input || !isNaturalDeliveryCode(input.code)) throw new RangeError('지원되지 않는 자연분만 수가 코드');
+        const providerAddOnRate = PROVIDER_ADD_ON_RATES[input.hospitalClass];
+        if (providerAddOnRate === undefined) throw new RangeError('지원되지 않는 요양기관 종별');
+
+        ['mealCount', 'mealUnitPrice', 'otherPatientPay'].forEach(field => {
+            if (Object.prototype.hasOwnProperty.call(input, field)) {
+                throw new RangeError(`${field} 임의 입력은 지원하지 않습니다`);
+            }
+        });
+
+        const whole = (value, label, min = 0, max = Number.MAX_SAFE_INTEGER) => {
+            if (value === null || value === undefined || value === '') throw new RangeError(label);
+            const number = Number(value);
+            if (!Number.isSafeInteger(number) || number < min || number > max) throw new RangeError(label);
+            return number;
+        };
+        const safeMultiply = (left, right, label) => {
+            const result = left * right;
+            if (!Number.isSafeInteger(result)) throw new RangeError(label);
+            return result;
+        };
+        const safeAdd = (left, right, label) => {
+            const result = left + right;
+            if (!Number.isSafeInteger(result)) throw new RangeError(label);
+            return result;
+        };
+        const normalizeCode = (value, label) => {
+            if (typeof value !== 'string' || !value.trim()) throw new RangeError(label);
+            return value.trim().toUpperCase();
+        };
+        const normalizeLines = (value, feeMap, label) => {
+            if (!Array.isArray(value)) throw new RangeError(`${label} 목록`);
+            const seen = new Set();
+            return value.map((line, index) => {
+                if (!line || typeof line !== 'object' || Array.isArray(line)) throw new RangeError(`${label} ${index + 1}`);
+                const code = normalizeCode(line.code, `${label} 수가 코드`);
+                if (!feeMap[code]) throw new RangeError(`지원되는 급여 ${label} 수가 코드가 아닙니다: ${code}`);
+                if (seen.has(code)) throw new RangeError(`중복 ${label} 수가 코드: ${code}`);
+                seen.add(code);
+                return { code, count: whole(line.count, `${code} 횟수`, 1), fee: feeMap[code] };
+            });
+        };
+
+        const stayDays = whole(input.stayDays, '청구 입원일수', 1, 90);
+        const roomBeds = whole(input.roomBeds, '병실 인원', 2, 6);
+        if (!ROOM_BED_LETTERS[roomBeds]) throw new RangeError('지원되는 병실은 2~6인실입니다');
+        if (input.hospitalClass === 'clinic' && roomBeds <= 3) {
+            throw new RangeError('의원은 급여 2·3인실 AB 수가 코드를 지원하지 않습니다');
+        }
+        const clinicPrice = whole(input.clinicPrice, '공식 의원 분만 수가', 1);
+        const hospitalPrice = whole(input.hospitalPrice, '공식 병원 분만 수가', 1);
+        const unitPrice = input.hospitalClass === 'clinic' ? clinicPrice : hospitalPrice;
+
+        const mealLines = normalizeLines(input.mealLines, COVERED_MEAL_FEES, '식대');
+        const mealAddOns = normalizeLines(input.mealAddOns, COVERED_MEAL_ADD_ONS, '식대 가산');
+        const allMealCodes = new Set();
+        mealLines.concat(mealAddOns).forEach(line => {
+            if (allMealCodes.has(line.code)) throw new RangeError(`중복 식대 수가 코드: ${line.code}`);
+            allMealCodes.add(line.code);
+        });
+
+        mealLines.forEach(line => {
+            if (line.fee.provider !== input.hospitalClass) {
+                throw new RangeError(`${line.code}는 선택한 요양기관 종별과 일치하지 않습니다`);
+            }
+        });
+
+        const generalMealCount = mealLines
+            .filter(line => line.fee.kind === 'general')
+            .reduce((sum, line) => safeAdd(sum, line.count, '일반식 횟수'), 0);
+        const maternalMealCount = mealLines
+            .filter(line => line.fee.kind === 'maternal')
+            .reduce((sum, line) => safeAdd(sum, line.count, '산모식 횟수'), 0);
+        const mealCount = safeAdd(generalMealCount, maternalMealCount, '전체 식사 횟수');
+        const maxGeneralMealCount = safeMultiply(stayDays, 3, '일반식 허용 횟수');
+        const maxMaternalMealCount = safeMultiply(stayDays, 4, '산모식 허용 횟수');
+        const maxMealCount = safeMultiply(stayDays, 4, '전체 식사 허용 횟수');
+        if (generalMealCount > maxGeneralMealCount) {
+            throw new RangeError('일반식 횟수가 입원일수당 최대 3식을 초과합니다');
+        }
+        if (maternalMealCount > maxMaternalMealCount) {
+            throw new RangeError('산모식 횟수가 입원일수당 최대 4식을 초과합니다');
+        }
+        if (mealCount > maxMealCount) {
+            throw new RangeError('전체 식사 횟수가 입원일수당 최대 4식을 초과합니다');
+        }
+        mealAddOns.forEach(line => {
+            const limit = line.fee.bound === 'general' ? generalMealCount : mealCount;
+            if (line.count > limit) throw new RangeError(`${line.code} 횟수가 적용 가능한 식사 횟수를 초과합니다`);
+        });
+
+        const mealComponentsWithoutPatientPay = mealLines.concat(mealAddOns).map(line => {
+            const grossFee = safeMultiply(line.fee.unitPrice, line.count, `${line.code} 총액`);
+            return {
+                code: line.code,
+                label: line.fee.label,
+                kind: line.fee.kind || 'add_on',
+                count: line.count,
+                unitPrice: line.fee.unitPrice,
+                grossFee
+            };
+        });
+        const mealGrossFee = mealComponentsWithoutPatientPay
+            .reduce((sum, component) => safeAdd(sum, component.grossFee, '식대 총액'), 0);
+        // 모든 기본식대·가산을 합한 뒤 50%를 적용하고 10원 미만을 한 번만 절사한다.
+        const mealPatientPay = safeMultiply(Math.floor(mealGrossFee / 20), 10, '식대 본인부담액');
+        // 행별 patientPay는 독립 산정액이 아니라 누적 총액 절사분의 결정적 배분이다.
+        // 따라서 행 합계는 위에서 한 번 산정한 mealPatientPay와 항상 일치한다.
+        let allocatedMealGross = 0;
+        let allocatedMealPatientPay = 0;
+        const mealComponents = mealComponentsWithoutPatientPay.map(component => {
+            allocatedMealGross = safeAdd(allocatedMealGross, component.grossFee, '식대 누적 총액');
+            const cumulativePatientPay = safeMultiply(Math.floor(allocatedMealGross / 20), 10, '식대 누적 본인부담액');
+            const patientPay = cumulativePatientPay - allocatedMealPatientPay;
+            allocatedMealPatientPay = cumulativePatientPay;
+            return { ...component, patientPay };
+        });
+
+        let roomFeeCode = null;
+        let roomPatientPay = 0;
+        if (input.roomFeeCode !== undefined && input.roomFeeCode !== null && input.roomFeeCode !== '') {
+            roomFeeCode = normalizeCode(input.roomFeeCode, '병실 수가 코드');
+            if (!/^AB[1-4][0-9A-Z]{2}$/.test(roomFeeCode)) {
+                throw new RangeError('지원되는 급여 병실 AB 수가 코드가 아닙니다');
+            }
+            if (!roomFeeCode.startsWith(PROVIDER_ROOM_PREFIXES[input.hospitalClass])) {
+                throw new RangeError('병실 수가 코드가 선택한 요양기관 종별과 일치하지 않습니다');
+            }
+            if (roomBeds <= 3) {
+                if (!COVERED_TWO_THREE_BED_ROOM_CODES[roomBeds].has(roomFeeCode)) {
+                    const otherRoomBeds = roomBeds === 2 ? 3 : 2;
+                    if (COVERED_TWO_THREE_BED_ROOM_CODES[otherRoomBeds].has(roomFeeCode)) {
+                        throw new RangeError('병실 수가 코드가 선택한 병실 인원과 일치하지 않습니다');
+                    }
+                    throw new RangeError('공식 급여 2·3인실 기본 AB 수가 코드가 아닙니다');
+                }
+            } else {
+                const roomMatch = /^AB[1-4]([AJE])([0-9A-Z])$/.exec(roomFeeCode);
+                if (!roomMatch || roomMatch[1] !== ROOM_BED_LETTERS[roomBeds]) {
+                    throw new RangeError('병실 수가 코드가 선택한 병실 인원과 일치하지 않습니다');
+                }
+            }
+        }
+        if (roomBeds <= 3) {
+            if (!roomFeeCode) throw new RangeError('2·3인실은 병원이 확인한 급여 AB 병실 수가 코드가 필요합니다');
+            if (!Object.prototype.hasOwnProperty.call(input, 'roomPatientPayTotal')) {
+                throw new RangeError('2·3인실은 병원이 확인한 전체 입원기간 병실 본인부담 총액이 필요합니다');
+            }
+            roomPatientPay = whole(input.roomPatientPayTotal, '병원 확인 병실 본인부담 총액');
+        } else if (Object.prototype.hasOwnProperty.call(input, 'roomPatientPayTotal')) {
+            const submittedRoomPay = whole(input.roomPatientPayTotal, '병원 확인 병실 본인부담 총액');
+            if (submittedRoomPay !== 0) throw new RangeError('자연분만 관련 4인실 이상 입원료 본인부담은 0원입니다');
+        }
+
+        // 공표 단가는 의원/병원 환산지수만 반영한 금액이다. R4(제9장)는 종별가산 대상.
+        const providerAddOnAmount = Math.round(unitPrice * providerAddOnRate);
+        if (!Number.isSafeInteger(providerAddOnAmount)) throw new RangeError('종별가산 금액');
+        // 청구서 전체 요양급여비용총액1의 10원 미만 절사는 모든 청구행 합산 뒤 한 번만 한다.
+        // 여기서는 다른 청구행을 알 수 없으므로 항목별 절사하지 않은 청구 합산 전 금액을 반환한다.
+        const deliveryGrossFee = safeAdd(unitPrice, providerAddOnAmount, '분만 급여 총액');
+        // 자연분만 급여 본인부담은 0원이고 식대만 50%다. 관련 입원 4인실 이상은
+        // 장기입원 본인부담 인상 대상에서도 제외되므로 병실 본인부담을 더하지 않는다.
+        const knownCoveredGrossFee = safeAdd(deliveryGrossFee, mealGrossFee, '확인된 급여 총액');
+        const totalPatientPay = safeAdd(mealPatientPay, roomPatientPay, '환자부담 합계');
+        const roomPatientShareRate = roomBeds >= 4
+            ? 0
+            : (input.hospitalClass === 'tertiary_hospital'
+                ? (roomBeds === 2 ? 0.5 : 0.4)
+                : (input.hospitalClass === 'clinic' ? null : (roomBeds === 2 ? 0.4 : 0.3)));
+        return {
+            providerAddOnRate, unitPrice, providerAddOnAmount, deliveryGrossFee,
+            deliveryGrossFeeIsPreClaim: true,
+            wholeClaimRoundingApplied: false,
+            deliveryPatientShareRate: 0, deliveryPatientPay: 0,
+            mealPatientShareRate: 0.5, mealCount, generalMealCount, maternalMealCount,
+            mealComponents, mealGrossFee, mealPatientPay,
+            stayDays, roomBeds, roomFeeCode, roomPatientShareRate, roomPatientPay,
+            otherPatientPay: 0, knownCoveredGrossFee, knownCoveredGrossFeeIsPreClaim: true, totalPatientPay
+        };
     }
 
     function itemPrice(item, provider) {
@@ -204,5 +436,7 @@
         return [];
     }
 
-    return Object.freeze({ ANESTHESIA_FEES, sourceDate: SOURCE_DATE, createConsumerEstimateItems, estimateAnesthesia, resolveBody });
+    return Object.freeze({ ANESTHESIA_FEES, PROVIDER_ADD_ON_RATES, COVERED_MEAL_FEES, COVERED_MEAL_ADD_ONS, sourceDate: SOURCE_DATE,
+        createConsumerEstimateItems, estimateAnesthesia, resolveBody,
+        isNaturalDeliveryCode, estimateNaturalDelivery });
 }));

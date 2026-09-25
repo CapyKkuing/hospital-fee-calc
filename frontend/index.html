@@ -245,7 +245,7 @@
 
                         <!-- 입원 상세 옵션 (입원 선택시에만 표시) -->
                         <div id="hospitalization_details" class="sub-form-section hidden">
-                            <div class="sub-group">
+                            <div id="generic_room_field" class="sub-group">
                                 <label class="sub-label">병실 등급</label>
                                 <select id="room_type" class="form-select" onchange="calculate()">
                                     <option value="standard" selected>일반 다인실 (급여 적용 · 20% 본인부담)</option>
@@ -260,6 +260,71 @@
                                     <span class="unit">일</span>
                                     <button type="button" class="btn-step" onclick="adjustDays(1)">+</button>
                                 </div>
+                            </div>
+                            <div id="delivery_details" class="sub-form-section hidden">
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_fetus_count">실제 태아 수 (분만 기록 확인)</label>
+                                    <input type="number" id="delivery_fetus_count" class="form-input" min="1" max="10" step="1" placeholder="태아 수 입력" inputmode="numeric">
+                                    <p class="public-data-help-text">R4353·R4358의 ‘제2태아부터 [1인당]’ 항목은 태아 수가 2명 이상일 때 추가됩니다. 단태아는 1, 다태아는 실제 태아 수를 입력하세요.</p>
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_room_beds">자연분만 입원 병실 인원</label>
+                                    <select id="delivery_room_beds" class="form-select" onchange="updateDeliveryDetails(); calculate()">
+                                        <option value="4" selected>4인실</option>
+                                        <option value="5">5인실</option>
+                                        <option value="6">6인실 이상</option>
+                                        <option value="3">3인실 (급여 입원료 확인 필요)</option>
+                                        <option value="2">2인실 (급여 입원료 확인 필요)</option>
+                                    </select>
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_maternal_meal_count">산모식 실제 제공 횟수</label>
+                                    <input type="number" id="delivery_maternal_meal_count" class="form-input" min="0" step="1" placeholder="없으면 0">
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_maternal_meal_code">산모식 급여 코드 (병원 청구내역 확인)</label>
+                                    <select id="delivery_maternal_meal_code" class="form-select">
+                                        <option value="">산모식이 없으면 선택하지 않음</option>
+                                        <option value="Y6100">Y6100 · 상급종합병원</option>
+                                        <option value="Y6200">Y6200 · 종합병원</option>
+                                        <option value="Y6300">Y6300 · 병원</option>
+                                        <option value="Y6400">Y6400 · 의원</option>
+                                    </select>
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_general_meal_count">일반식 실제 제공 횟수</label>
+                                    <input type="number" id="delivery_general_meal_count" class="form-input" min="0" step="1" placeholder="없으면 0">
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_general_meal_code">일반식 급여 코드 (병원 청구내역 확인)</label>
+                                    <select id="delivery_general_meal_code" class="form-select">
+                                        <option value="">일반식이 없으면 선택하지 않음</option>
+                                        <option value="Y2100">Y2100 · 상급종합병원</option>
+                                        <option value="Y2200">Y2200 · 종합병원</option>
+                                        <option value="Y2300">Y2300 · 병원</option>
+                                        <option value="Y2400">Y2400 · 의원</option>
+                                    </select>
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_direct_meal_addon_count">직영 가산 Z0030 적용 식수</label>
+                                    <input type="number" id="delivery_direct_meal_addon_count" class="form-input" min="0" step="1" placeholder="없으면 0">
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_nutritionist_addon_count">일반식 영양사 가산 Z0010 적용 식수</label>
+                                    <input type="number" id="delivery_nutritionist_addon_count" class="form-input" min="0" step="1" placeholder="없으면 0">
+                                </div>
+                                <div class="sub-group">
+                                    <label class="sub-label" for="delivery_cook_addon_count">일반식 조리사 가산 Z0011 적용 식수</label>
+                                    <input type="number" id="delivery_cook_addon_count" class="form-input" min="0" step="1" placeholder="없으면 0">
+                                </div>
+                                <div id="delivery_room_field" class="sub-group hidden">
+                                    <label class="sub-label" for="delivery_room_fee_code">2·3인실 급여 입원료 기본 코드 (병원 확인)</label>
+                                    <input type="text" id="delivery_room_fee_code" class="form-input" maxlength="5" placeholder="예: AB1N1">
+                                    <label class="sub-label" for="delivery_room_total_patient_pay">입원 전체 기간 급여 입원료 환자부담 총액 (병원 확인)</label>
+                                    <input type="number" id="delivery_room_total_patient_pay" class="form-input" min="0" step="1">
+                                    <p class="public-data-help-text">2·3인실은 간호등급·병실 변경·입퇴원 시각에 따라 금액이 달라집니다. 병원에서 확인한 급여 코드와 전체 기간 환자부담액만 입력하세요.</p>
+                                </div>
+                                <p class="public-data-help-text">자연분만 급여 항목만 계산합니다. 일반 4인실 이상은 분만 관련 급여 입원료 본인부담 0원이며, 식대는 실제 제공·청구된 급여 코드와 가산 횟수로 계산합니다. 인력기준 미충족 등 확장 식대코드는 아직 지원하지 않습니다. 비급여·신생아·분만과 무관한 진료는 포함하지 않습니다.</p>
                             </div>
                         </div>
 
@@ -507,14 +572,15 @@
                 <div class="result-display">
                     <!-- 최상단 강조: 최종 예상 실부담금 및 가격 편차 범위 -->
                     <div class="result-item final-cost-box-primary">
-                        <span class="result-label highlight-label">최종 예상 환자 실부담금</span>
+                        <span id="final-cost-label" class="result-label highlight-label">최종 예상 환자 실부담금</span>
                         <div class="cost-value-wrapper highlight-value">
                             <span id="display_final_cost" class="cost-value main-value">0</span><span class="cost-unit main-unit">원</span>
                         </div>
                         <div class="cost-range-primary">
-                            <span class="range-lbl">대략적인 예상 범위:</span>
+                            <span id="cost-range-label" class="range-lbl">대략적인 예상 범위:</span>
                             <span id="display_cost_range" class="range-value-large">0원 ~ 0원</span>
                         </div>
+                        <p id="delivery-result-note" class="public-data-help-text hidden" aria-live="polite">자연분만은 공식 수가와 병원 확인 비용만 반영합니다.</p>
                     </div>
 
                     <div class="result-item total-cost-box-secondary">
