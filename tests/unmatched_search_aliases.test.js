@@ -167,4 +167,42 @@ assert(!aliasSql.includes("('FEE_MM300', '체열')"), '체열 검색어를 적�
 assert(!aliasSql.includes("('FEE_HA770', '적외선 하지')"), '적외선 하지 검색어를 ICG 혈관조영에 연결하면 안 됩니다.');
 assert(mm300Sql.includes("('FEE_MM300', '적외선 하지')"), '적외선 하지 검색어는 MM300에만 연결해야 합니다.');
 
+// 2026-10-16: 간섬유화·주사치료는 정적 공식 코드에 승인 후보로만 연결하고 애매한 검색어는 보류한다.
+const octoberSql = fs.readFileSync(path.join(root, 'database', 'search-aliases-2026-10-16.sql'), 'utf8');
+const octoberItems = {
+    FEE_D1980: ['M2BPGi[정밀면역검사]', 64580, 56610],
+    FEE_KK010: ['피하또는근육내주사', 1720, 1510],
+    FEE_KK020: ['정맥내일시주사[1일당]', 2450, 2150],
+    FEE_KK090: ['관절강내주사', 18340, 16080]
+};
+for (const [code, [name, clinicPrice, hospitalPrice]] of Object.entries(octoberItems)) {
+    const item = publicItems.get(code);
+    assert(item && item.isBenefit, `${code}는 공개 수가표의 급여 항목이어야 합니다.`);
+    assert.deepStrictEqual([item.name, item.clinicPrice, item.hospitalPrice], [name, clinicPrice, hospitalPrice], `${code} 명칭·가격이 일치해야 합니다.`);
+}
+const octoberDb = new DatabaseSync(':memory:');
+octoberDb.exec(schemaSql);
+octoberDb.exec(`
+  INSERT INTO search_candidates (query, normalized_query, item_id, item_name, item_category, status)
+  VALUES ('주사치료', '주사치료', NULL, '주사치료', NULL, 'pending'),
+         ('자가골수', '자가골수', NULL, '자가골수', NULL, 'pending'),
+         ('안면마비', '안면마비', NULL, '안면마비', NULL, 'pending');
+`);
+octoberDb.exec(octoberSql);
+octoberDb.exec(octoberSql);
+const approvedFor = (query) => octoberDb.prepare(
+    "SELECT item_id FROM search_candidates WHERE normalized_query = ? AND status = 'approved' ORDER BY item_id"
+).all(query).map((row) => row.item_id);
+assert.deepStrictEqual(approvedFor('간섬유화'), ['FEE_D1980'], '간섬유화는 M2BPGi 급여 검사에만 연결해야 합니다.');
+assert.deepStrictEqual(approvedFor('섬유화'), ['FEE_D1980'], '섬유화는 M2BPGi 급여 검사에만 연결해야 합니다.');
+assert.deepStrictEqual(approvedFor('주사치료'), ['FEE_KK010', 'FEE_KK020', 'FEE_KK090'], '주사치료는 대표 급여 주사 3건이며 재실행해도 중복되면 안 됩니다.');
+assert.strictEqual(octoberDb.prepare("SELECT COUNT(*) AS n FROM search_candidates WHERE normalized_query = '주사치료' AND status = 'pending'").get().n, 0,
+    '주사치료 기존 pending 후보는 승인 처리되어야 합니다.');
+for (const query of ['복부섬유', '섬유', '자가골수', '혈답', '안면마비']) {
+    assert.deepStrictEqual(approvedFor(query), [], `${query}는 공식 급여 근거 없이 승인하면 안 됩니다.`);
+}
+assert.strictEqual(octoberDb.prepare("SELECT COUNT(*) AS n FROM medical_items").get().n, 0, '정적 수가 코드라 medical_items overlay를 만들지 않아야 합니다.');
+assert(!/DELETE\s+FROM/i.test(octoberSql), '10-16 SQL은 기존 행을 삭제하면 안 됩니다.');
+assert(octoberSql.includes('EZ829') && octoberSql.includes('BMAC'), '비급여 보류 근거를 기록해야 합니다.');
+
 console.log('PASS: 무결과 검색어 공식 수가·가산형 별칭·보류 경계');
