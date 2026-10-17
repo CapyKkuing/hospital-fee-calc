@@ -306,6 +306,47 @@ summary {
     font-weight: 700;
 }
 
+.table-wrap {
+    margin-top: 12px;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+th,
+td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    color: #334155;
+}
+
+th + th,
+td + td {
+    white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+    min-width: 3em;
+}
+
+th {
+    background: #f8fafc;
+    color: #172033;
+    font-weight: 700;
+}
+
+.table-note {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #64748b;
+}
+
 .seo-footer {
     flex-wrap: wrap;
     margin-top: 20px;
@@ -326,6 +367,15 @@ nav a {
 }
 
 @media (max-width: 767px) {
+    table {
+        font-size: 14px;
+    }
+
+    th,
+    td {
+        padding: 8px;
+    }
+
     .coupang-widget--wide {
         display: none;
     }

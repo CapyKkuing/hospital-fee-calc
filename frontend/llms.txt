@@ -12,6 +12,11 @@ MEDICost는 공개 의료 자료를 참고해 병원비, 검사비, 입원비와
 - https://hospital-fee-calc.pages.dev/endoscopy-cost-calculator
 - https://hospital-fee-calc.pages.dev/hospitalization-cost-calculator
 - https://hospital-fee-calc.pages.dev/noncovered-medical-cost
+- https://hospital-fee-calc.pages.dev/abdominal-ultrasound-cost
+- https://hospital-fee-calc.pages.dev/manual-therapy-cost
+- https://hospital-fee-calc.pages.dev/knee-mri-cost
+- https://hospital-fee-calc.pages.dev/sedation-endoscopy-cost
+- https://hospital-fee-calc.pages.dev/copay-rate-guide
 - https://hospital-fee-calc.pages.dev/data-sources
 - https://hospital-fee-calc.pages.dev/about
 - https://hospital-fee-calc.pages.dev/privacy

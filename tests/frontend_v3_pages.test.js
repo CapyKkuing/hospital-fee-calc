@@ -11,7 +11,12 @@ const seoPages = [
     ['ct-cost-calculator.html', 'ct-cost-calculator', 'CT'],
     ['endoscopy-cost-calculator.html', 'endoscopy-cost-calculator', '내시경'],
     ['hospitalization-cost-calculator.html', 'hospitalization-cost-calculator', '입원비'],
-    ['noncovered-medical-cost.html', 'noncovered-medical-cost', '비급여']
+    ['noncovered-medical-cost.html', 'noncovered-medical-cost', '비급여'],
+    ['abdominal-ultrasound-cost.html', 'abdominal-ultrasound-cost', '복부 초음파'],
+    ['manual-therapy-cost.html', 'manual-therapy-cost', '도수치료'],
+    ['knee-mri-cost.html', 'knee-mri-cost', '무릎 MRI'],
+    ['sedation-endoscopy-cost.html', 'sedation-endoscopy-cost', '수면내시경'],
+    ['copay-rate-guide.html', 'copay-rate-guide', '본인부담률']
 ];
 
 function readPage(name) {
