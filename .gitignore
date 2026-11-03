@@ -25,3 +25,6 @@ dist/
 build/
 .wrangler/
 .gstack/
+
+# Local agent browser profile (cookies, login data)
+.codex-progress/
