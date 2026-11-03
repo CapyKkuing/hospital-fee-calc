@@ -7,23 +7,22 @@
 - 이전 작업 기록은 `docs/TASK_HISTORY.md`에 보관한다.
 - 상태 표기: `[ ]` 미완료, `[/]` 진행 중, `[x]` 완료
 
-## 현재 작업: 2026-10-17 검색 유입용 비용 안내 페이지 5개
+## 현재 작업: 2026-11-03 주간 무결과 검색어 정리 (첫 회)
 
-목표: 검색에 걸릴 비용 안내 페이지를 공개 수가·비급여 데이터로 직접 작성해 유입을 늘린다. 대량 자동 생성은 하지 않는다.
+목표: `search_candidates` pending 검색어를 심평원 공식 급여 코드와 매칭해 검색에 노출하고, 매주 같은 절차로 반복한다. 절차서: `docs/weekly-unmatched-routine.md`.
 
 ## 작업 범위
 
-- [x] 복부·간 초음파 비용 (`/abdominal-ultrasound-cost`)
-- [x] 도수치료 가격 (`/manual-therapy-cost`)
-- [x] 무릎 MRI 비용 (`/knee-mri-cost`)
-- [x] 수면내시경 비용 (`/sedation-endoscopy-cost`)
-- [x] 병원 종류별 본인부담률 (`/copay-rate-guide`)
-- [x] 자동 테스트·로컬 모바일 화면 확인 (`frontend_v3_browser.test.js`의 종별가산 문구 실패는 기존 main에서도 동일, 이번 변경과 무관)
-- [/] commit(커밋)·PR·배포 (2026-10-17 사용자 승인)
-- [ ] 2~4주 뒤 서치콘솔·네이버 노출 확인 후 나머지 주제 진행
+- [x] 운영 D1 읽기 전용 조회 (pending 21건, 최근 30일 무결과 로그 7종 — 모두 pending/처리됨 범위)
+- [x] 분류: A단계 0건, B단계 0건, 제외 21건 (약품·KCD·비급여·단어 조각)
+- [x] `database/search-aliases-2026-11-03.sql` 작성 (제외 처리 UPDATE만, 재실행 안전)
+- [x] `tests/unmatched_search_aliases.test.js` 항목 추가, 전체 테스트 통과
+- [x] `docs/weekly-unmatched-routine.md` 절차서 작성
+- [ ] 운영 D1 백업 → 로컬 사본 미리 실행 → 적용 (오케스트레이터/사용자 승인 후, 아직 미실행)
+- [ ] 적용 후 `/api/search-aliases` 확인, commit
 
 ## 진행 메모
 
-- 근거: 운영 D1 검색 로그(30일 37건, 최다 복부초음파), `fee_schedule_items.js`(2026-05-01), `nonbenefit_region_prices.json`(2026-01 적용분).
-- 새 페이지마다 `index.html` 계산기 목록, `sitemap.xml`, `llms.txt`, `tests/frontend_v3_pages.test.js`의 `seoPages`에 추가한다.
-- 표 스타일은 `assets/css/seo-page.css`의 `.table-wrap`·`table`·`.table-note`를 쓴다.
+- 운영 DB 쓰기·commit·배포는 하지 않았다.
+- 10-16 방식 유지: 승인은 `search_candidates`의 item_id·item_name·item_category·status='approved'.
+- 워커는 `search_candidates`에 같은 검색어가 한 번이라도 있으면(rejected 포함) 다시 넣지 않는다.

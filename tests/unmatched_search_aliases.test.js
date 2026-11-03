@@ -205,4 +205,32 @@ assert.strictEqual(octoberDb.prepare("SELECT COUNT(*) AS n FROM medical_items").
 assert(!/DELETE\s+FROM/i.test(octoberSql), '10-16 SQL은 기존 행을 삭제하면 안 됩니다.');
 assert(octoberSql.includes('EZ829') && octoberSql.includes('BMAC'), '비급여 보류 근거를 기록해야 합니다.');
 
+// 2026-11-03: 첫 주간 정리. 승인(A) 0건, 약품·KCD·비급여·단어 조각 21건은 모두 rejected 처리한다.
+const novemberSql = fs.readFileSync(path.join(root, 'database', 'search-aliases-2026-11-03.sql'), 'utf8');
+const novemberQueries = [
+    '23.9', 'Denosumab', 'fibula', 'leg', 'lower', 's62.620', 'tibia', 'x-lay',
+    '골절, 폐쇄성', '데노수맙', '첫마디뼈의 골절, 폐쇄성', '프롤리아',
+    'aggregate', '방귀', '적외선체열검사', '체열', '안면마비', '자가골수',
+    '복부섬유', '섬유', '혈답'
+];
+const novemberDb = new DatabaseSync(':memory:');
+novemberDb.exec(schemaSql);
+const insertPending = novemberDb.prepare(
+    "INSERT INTO search_candidates (query, normalized_query, item_id, item_name, status) VALUES (?, ?, NULL, ?, 'pending')"
+);
+for (const query of novemberQueries) insertPending.run(query, query.toLowerCase(), query);
+// 이미 승인된 행(10-16 결과)은 이번 SQL이 건드리면 안 된다.
+novemberDb.exec(`INSERT INTO search_candidates (query, normalized_query, item_id, item_name, item_category, status)
+  VALUES ('간섬유화', '간섬유화', 'FEE_D1980', 'M2BPGi[정밀면역검사]', 'specimen', 'approved')`);
+novemberDb.exec(novemberSql);
+novemberDb.exec(novemberSql);
+const countStatus = (status) => novemberDb.prepare('SELECT COUNT(*) AS n FROM search_candidates WHERE status = ?').get(status).n;
+assert.strictEqual(countStatus('pending'), 0, '11-03 SQL 실행 뒤 pending 후보가 남으면 안 됩니다.');
+assert.strictEqual(countStatus('rejected'), novemberQueries.length, '21건 모두 rejected 여야 합니다.');
+assert.strictEqual(countStatus('approved'), 1, '이번 회차는 승인(A)이 없고 기존 승인 행은 그대로여야 합니다.');
+assert.strictEqual(novemberDb.prepare("SELECT COUNT(*) AS n FROM search_candidates WHERE item_id IS NOT NULL AND status = 'rejected'").get().n, 0,
+    '코드가 연결된 행을 rejected 로 바꾸면 안 됩니다.');
+assert(!/DELETE\s+FROM|DROP\s|ALTER\s/i.test(novemberSql.replace(/^--.*$/gm, '')), '11-03 SQL은 DELETE·DROP·ALTER를 쓰면 안 됩니다.');
+assert(novemberSql.includes('EZ776') && novemberSql.includes('BMAC'), '비급여 제외 근거를 기록해야 합니다.');
+
 console.log('PASS: 무결과 검색어 공식 수가·가산형 별칭·보류 경계');
