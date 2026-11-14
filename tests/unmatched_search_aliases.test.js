@@ -233,4 +233,37 @@ assert.strictEqual(novemberDb.prepare("SELECT COUNT(*) AS n FROM search_candidat
 assert(!/DELETE\s+FROM|DROP\s|ALTER\s/i.test(novemberSql.replace(/^--.*$/gm, '')), '11-03 SQL은 DELETE·DROP·ALTER를 쓰면 안 됩니다.');
 assert(novemberSql.includes('EZ776') && novemberSql.includes('BMAC'), '비급여 제외 근거를 기록해야 합니다.');
 
+// 2026-11-11: 요소검사 → 요소질소(D2300)+요소호흡검사(D5896) 승인, 방사선촬영은 부위 미특정으로 제외.
+const nov11Sql = fs.readFileSync(path.join(root, 'database', 'search-aliases-2026-11-11.sql'), 'utf8');
+const nov11Items = {
+    FEE_D2300: ['요소질소[NPN포함][화학반응-장비측정]', 1790, 1570],
+    FEE_D5896: ['Helicobacter pylori검사-요소호흡검사[정밀분광-질량분석]', 34040, 29840]
+};
+for (const [code, [name, clinicPrice, hospitalPrice]] of Object.entries(nov11Items)) {
+    const item = publicItems.get(code);
+    assert(item && item.isBenefit, `${code}는 공개 수가표의 급여 항목이어야 합니다.`);
+    assert.deepStrictEqual([item.name, item.clinicPrice, item.hospitalPrice], [name, clinicPrice, hospitalPrice], `${code} 명칭·가격이 일치해야 합니다.`);
+    assert.strictEqual(item.category, 'specimen', `${code} 분류는 specimen 이어야 합니다.`);
+}
+const nov11Db = new DatabaseSync(':memory:');
+nov11Db.exec(schemaSql);
+nov11Db.exec(`
+  INSERT INTO search_candidates (query, normalized_query, item_id, item_name, item_category, status)
+  VALUES ('방사선촬영', '방사선촬영', NULL, '방사선촬영', NULL, 'pending'),
+         ('요소검사', '요소검사', NULL, '요소검사', NULL, 'pending');
+`);
+nov11Db.exec(nov11Sql);
+nov11Db.exec(nov11Sql);
+const nov11Approved = (query) => nov11Db.prepare(
+    "SELECT item_id FROM search_candidates WHERE normalized_query = ? AND status = 'approved' ORDER BY item_id"
+).all(query).map((row) => row.item_id);
+assert.deepStrictEqual(nov11Approved('요소검사'), ['FEE_D2300', 'FEE_D5896'], '요소검사는 두 코드로 승인되고 재실행해도 중복되면 안 됩니다.');
+assert.deepStrictEqual(nov11Approved('방사선촬영'), [], '방사선촬영은 승인하면 안 됩니다.');
+const nov11Count = (status) => nov11Db.prepare('SELECT COUNT(*) AS n FROM search_candidates WHERE status = ?').get(status).n;
+assert.strictEqual(nov11Count('pending'), 0, '11-11 SQL 실행 뒤 pending 이 남으면 안 됩니다.');
+assert.strictEqual(nov11Count('rejected'), 1, '방사선촬영 1건만 rejected 여야 합니다.');
+assert.strictEqual(nov11Count('approved'), 2, '요소검사 승인 행은 2건이어야 합니다.');
+assert.strictEqual(nov11Db.prepare('SELECT COUNT(*) AS n FROM medical_items').get().n, 0, '정적 수가 코드라 medical_items overlay를 만들지 않아야 합니다.');
+assert(!/DELETE\s+FROM|DROP\s|ALTER\s|INSERT\s+INTO\s+medical_items/i.test(nov11Sql.replace(/^--.*$/gm, '')), '11-11 SQL은 DELETE·DROP·ALTER·medical_items 입력을 쓰면 안 됩니다.');
+
 console.log('PASS: 무결과 검색어 공식 수가·가산형 별칭·보류 경계');

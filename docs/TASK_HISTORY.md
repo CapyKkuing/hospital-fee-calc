@@ -118,3 +118,16 @@
 - 복부·간 초음파, 도수치료, 무릎 MRI, 수면내시경, 병원 종류별 본인부담률 안내 페이지 5개를 추가했다.
 - 자동 테스트·로컬 모바일 화면 확인 완료. commit·PR·배포는 2026-10-17 사용자 승인으로 진행.
 - 남은 일: 2~4주 뒤 서치콘솔·네이버 노출 확인 후 나머지 주제 진행.
+
+## 2026-11-03 주간 무결과 검색어 정리 (첫 회)
+
+- pending 21건 전부 제외 판정(약품·KCD·비급여·단어 조각). SQL: `database/search-aliases-2026-11-03.sql`.
+- 2026-11-11 운영 D1 조회 기준 상태: approved 27, rejected 22, pending 2(11-08 새 검색어).
+
+## 2026-11-11 주간 무결과 검색어 정리 (11-09 예약분)
+
+- pending 2건. 사용자 답변(2026-11-11)대로 반영: `요소검사` → FEE_D2300 요소질소 + FEE_D5896 요소호흡검사 승인, `방사선촬영` → 부위 미특정으로 제외.
+- SQL: `database/search-aliases-2026-11-11.sql`, 테스트 추가(`tests/unmatched_search_aliases.test.js`), 전체 테스트 통과.
+- 백업 `C:/Users/giro0/Desktop/Claude/backup/2026-11-11-search-analytics-db.sql` → 로컬 사본 미리 실행(재실행 중복 없음) → 운영 적용.
+- 적용 후: approved 29, rejected 23, pending 0. `/api/search-aliases`에 요소검사 2건 확인, 운영 수가표에 두 코드 존재 확인. 화면 검색창은 통계 동의가 필요해 직접 검색은 검증 못함.
+- commit 안 함(승인 대기).
