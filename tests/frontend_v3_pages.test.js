@@ -136,11 +136,10 @@ test('개인정보 안내는 최소수집과 30일 보유 기준을 명시한다
     assert.match(html, /기본 계산은 가능합니다/);
     assert.match(html, /30일/);
     assert.match(html, /데이터 오류/);
-    assert.match(html, /Kakao AdFit/);
-    assert.match(html, /익명화된 인터넷 사용정보/);
-    assert.match(html, /privacy\.kakao\.com\/policy\?lang=ko/);
-    assert.match(html, /입력칸과 예상 금액 숫자 위에는 광고를 겹치지 않습니다/);
-    assert.match(html, /쿠팡 파트너스/);
+    assert.match(html, /현재 이 사이트에는 광고와 제휴 링크를 게재하지 않습니다/);
+    assert.match(html, /게재를 시작하기 전에/);
+    assert.match(html, /입력칸과 예상 금액 숫자 위에는 광고를 겹치지 않으며/);
+    assert.doesNotMatch(html, /Kakao AdFit|쿠팡 파트너스/);
 });
 
 test('관리자 검색 화면은 레거시 클릭 상세 대신 운영 통계 자산을 사용한다', () => {
@@ -205,22 +204,9 @@ test('공개 SEO 페이지는 고유 한글 메타데이터와 검색용 본문�
         assert.match(html, new RegExp(`<h1[^>]*>[^<]*${keyword}`), name);
         assert.doesNotMatch(html, /(?:�|癰|沅|쑴|쎿)/, name);
         assert.match(html, /href="\/#calculator"/, `${name}: calculator CTA`);
-        assert.ok((html.match(/class="ad-slot ad-slot--content"/g) || []).length >= 2, `${name}: content ad slots`);
-        assert.strictEqual((html.match(/class="kakao_ad_area"/g) || []).length, 2, `${name}: Kakao ad slots`);
-        assert.match(html, /data-ad-unit="DAN-dmM66J0Ueo0AkcLo"/);
-        assert.match(html, /data-ad-unit="DAN-FwOH9Vn3dSU1pp97"/);
-        assert.strictEqual((html.match(/t1\.kakaocdn\.net\/kas\/static\/ba\.min\.js/g) || []).length, 2, `${name}: direct Kakao scripts`);
         assert.match(html, /id="consent-banner"/);
         assert.match(html, /data-open-consent/);
         assert.doesNotMatch(html, /(?:googlesyndication|pagead2\.googlesyndication\.com)/i, `${name}: Google ad script`);
-        assert.match(html, /coupang-widget-fallback/);
-        assert.doesNotMatch(html, /https:\/\/www\.coupang\.com\?lptag=/);
-        assert.strictEqual((html.match(/ads-partners\.coupang\.com\/g\.js/g) || []).length, 1, `${name}: Coupang loader script`);
-        assert.match(html, /assets\/js\/coupang-ads\.js/);
-        assert.match(html, /data-coupang-id="1017923"/);
-        assert.match(html, /data-coupang-id="1017935"/);
-        assert.doesNotMatch(html, /data-coupang-id="0"/);
-        assert.match(html, /쿠팡 파트너스 활동의 일환/);
     }
 });
 
@@ -256,42 +242,27 @@ test('공개 SEO 페이지의 JSON-LD와 크롤링 파일은 대표 URL과 일�
     assert.strictEqual(key.trim(), 'medicost-pages-20260712');
 });
 
-test('홈 계산기는 화면별 AdFit 하나와 추적 가능한 쿠팡 다이나믹 배너만 둔다', () => {
-    const html = readPage('index.html');
+test('AdSense 심사 전에는 공개 페이지에 Kakao AdFit·쿠팡 파트너스 광고와 운영자용 광고 안내를 두지 않는다', () => {
+    const htmlFiles = fs.readdirSync(frontend).filter(name => name.endsWith('.html') && !name.startsWith('admin-'));
+    for (const name of htmlFiles) {
+        const html = readPage(name);
+        assert.doesNotMatch(html, /class="[^"]*\bad-slot\b/, `${name}: ad slot`);
+        assert.doesNotMatch(html, /kakao_ad_area|data-adfit-unit|t1\.kakaocdn\.net|adfit-ads\.js/i, `${name}: Kakao AdFit`);
+        assert.doesNotMatch(html, /coupang|쿠팡/i, `${name}: Coupang Partners`);
+        assert.doesNotMatch(html, /pagead2\.googlesyndication\.com/i, `${name}: Google ad script`);
+    }
+
+    const home = readPage('index.html');
+    assert.doesNotMatch(home, /monetization-strip|AdSense 승인 전|result-ad-dialog|calculator-ad-footer/);
+    assert.match(home, /현재 이 사이트에는 광고를 게재하지 않습니다/);
+    assert.doesNotMatch(readPage('assets/js/app-shell.js'), /result-ad-dialog|MEDICostCoupangAds/);
+    assert.strictEqual(readPage('ads.txt').trim(), 'google.com, pub-1927730301151401, DIRECT, f08c47fec0942fa0');
+
     const css = readPage('assets/css/style-v3.css');
-    const runtimeIndex = html.indexOf('class="app-container calculator-runtime"');
-    const mobileAdFitIndex = html.indexOf('class="ad-slot ad-slot--calc-bottom"', runtimeIndex);
-    const appMainIndex = html.indexOf('class="app-main"', runtimeIndex);
-    assert.match(html, /monetization-strip/);
-    assert.match(html, /ad-slot--calc-left/);
-    assert.match(html, /ad-slot--calc-right/);
-    assert.match(html, /ad-slot--calc-bottom/);
-    assert.match(html, /calculator-workspace/);
-    assert.strictEqual((html.match(/class="kakao_ad_area"/g) || []).length, 0);
-    assert.strictEqual((html.match(/DAN-dmM66J0Ueo0AkcLo/g) || []).length, 1);
-    assert.strictEqual((html.match(/DAN-FwOH9Vn3dSU1pp97/g) || []).length, 1);
-    assert.ok(runtimeIndex >= 0 && mobileAdFitIndex > runtimeIndex && mobileAdFitIndex < appMainIndex, '모바일 AdFit은 계산기 입력 전에 둔다');
-    assert.match(html, /data-adfit-media="\(max-width: 1279px\)"/);
-    assert.match(html, /data-adfit-media="\(min-width: 1280px\)"/);
-    assert.strictEqual((html.match(/t1\.kakaocdn\.net\/kas\/static\/ba\.min\.js/g) || []).length, 0);
-    assert.strictEqual((html.match(/assets\/js\/adfit-ads\.js/g) || []).length, 1);
-    assert.match(css, /@media \(min-width: 768px\) and \(max-width: 1279px\)/);
-    assert.match(css, /@media \(max-width: 767px\)/);
-    assert.match(html, /coupang-widget-fallback/);
-    assert.doesNotMatch(html, /https:\/\/www\.coupang\.com\?lptag=/);
-    assert.strictEqual((html.match(/ads-partners\.coupang\.com\/g\.js/g) || []).length, 1);
-    assert.match(html, /assets\/js\/coupang-ads\.js/);
-    assert.match(html, /data-coupang-id="1017933"[^>]+data-coupang-width="120"[^>]+data-coupang-height="400"/);
-    assert.match(html, /data-coupang-id="1017923"[^>]+data-coupang-width="680"[^>]+data-coupang-height="140"/);
-    assert.match(html, /data-coupang-id="1017935"[^>]+data-coupang-width="250"[^>]+data-coupang-height="250"/);
-    assert.doesNotMatch(html, /data-coupang-id="0"/);
-    assert.match(html, /id="result-ad-dialog"/);
-    assert.match(html, /data-coupang-trigger="result-dialog"/);
-    assert.match(html, /광고를 꼭 봐야 결과가 열리는 방식은 사용하지 않습니다/);
-    assert.doesNotMatch(html, /pagead2\.googlesyndication\.com/i);
+    assert.match(css, /\.app-main \{[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*grid-template-areas: "workspace";/);
 });
 
-test('쿠팡 로더는 공식 추적 위젯만 렌더하고 결과 안내 위젯은 요청 시 연다', () => {
+test('보관 중인 쿠팡 로더(현재 미연결)는 공식 추적 위젯만 렌더하고 결과 안내 위젯은 요청 시 연다', () => {
     const script = readPage('assets/js/coupang-ads.js');
     assert.match(script, /new root\.PartnersCoupang\.G/);
     assert.match(script, /trackingCode: 'AF2104018'/);
