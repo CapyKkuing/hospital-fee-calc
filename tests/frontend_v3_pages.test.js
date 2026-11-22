@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const frontend = path.join(__dirname, '..', 'frontend');
-const pages = ['index.html', 'about.html', 'data-sources.html', 'privacy.html', 'contact.html'];
+const pages = ['index.html', 'about.html', 'data-sources.html', 'privacy.html', 'contact.html', 'terms.html', 'disclaimer.html'];
 const seoPages = [
     ['hospital-cost-calculator.html', 'hospital-cost-calculator', '병원비'],
     ['er-cost-calculator.html', 'er-cost-calculator', '응급실'],
@@ -142,6 +142,52 @@ test('개인정보 안내는 최소수집과 30일 보유 기준을 명시한다
     assert.doesNotMatch(html, /Kakao AdFit|쿠팡 파트너스/);
 });
 
+test('이용약관과 면책·의료 고지는 색인 가능한 실제 페이지이고 모든 공개 페이지 하단에서 연결된다', () => {
+    const terms = readPage('terms.html');
+    const disclaimer = readPage('disclaimer.html');
+    for (const [name, html] of [['terms.html', terms], ['disclaimer.html', disclaimer]]) {
+        assert.match(html, /<title>[^<]{5,}<\/title>/, name);
+        assert.match(html, /<meta name="description" content="[^"]{20,}"/, name);
+        assert.match(html, /<meta name="robots" content="index, follow"/, name);
+        assert.doesNotMatch(html, /mailto:|tel:/i, name);
+    }
+    assert.match(terms, /계산 결과의 성격/);
+    assert.match(terms, /책임의 범위/);
+    assert.match(disclaimer, /확정 견적이 아닙니다/);
+    assert.match(disclaimer, /의료 판단을 제공하지 않습니다/);
+    assert.match(disclaimer, /실제 청구액이 달라지는 이유/);
+    assert.match(disclaimer, /자료 출처와 기준일/);
+    assert.match(disclaimer, /119/);
+
+    const feeDate = readPage('assets/js/fee_schedule_items.js').match(/"sourceDate":\s*"(\d{4})-(\d{2})-(\d{2})"/);
+    const nonbenefitDate = readPage('assets/js/nonbenefit_data.js').match(/"fetchedAt":\s*"(\d{4})-(\d{2})-(\d{2})"/);
+    for (const [label, match] of [['급여 수가 기준일', feeDate], ['비급여 수집일', nonbenefitDate]]) {
+        assert.ok(match, label);
+        const [, year, month, day] = match;
+        assert.ok(disclaimer.includes(`${year}년 ${Number(month)}월 ${Number(day)}일`), `${label}: 면책 고지의 날짜가 데이터 파일과 다릅니다`);
+    }
+
+    for (const name of [...pages, ...seoPages.map(([pageName]) => pageName)]) {
+        const footer = readPage(name).match(/<footer class="(?:site|seo)-footer">[\s\S]*?<\/footer>/);
+        assert.ok(footer, `${name}: footer`);
+        assert.match(footer[0], /href="\/terms"/, `${name}: terms link`);
+        assert.match(footer[0], /href="\/disclaimer"/, `${name}: disclaimer link`);
+    }
+});
+
+test('없는 주소는 홈으로 대체되지 않고 404 전용 페이지로 응답한다', () => {
+    const html = readPage('404.html');
+    assert.match(html, /<meta name="robots" content="noindex, follow"/);
+    assert.doesNotMatch(html, /rel="canonical"/);
+    assert.match(html, /페이지를 찾을 수 없습니다/);
+    assert.match(html, /href="\/#calculator"/);
+    assert.doesNotMatch(html, /(?:href|src)="assets\//, '중첩 경로에서도 깨지지 않도록 절대 경로 자산을 써야 합니다');
+    assert.doesNotMatch(readPage('sitemap.xml'), /404/);
+    for (const name of ['_redirects', '_routes.json']) {
+        assert.strictEqual(fs.existsSync(path.join(frontend, name)), false, `${name}: SPA fallback 규칙이 404 응답을 가릴 수 있습니다`);
+    }
+});
+
 test('관리자 검색 화면은 레거시 클릭 상세 대신 운영 통계 자산을 사용한다', () => {
     const html = readPage('admin-search.html');
     assert.match(html, /assets\/css\/admin-search\.css/);
@@ -163,7 +209,7 @@ test('검색 운영 관리자는 필요한 네 보기와 목록별 삭제 확인
 });
 
 test('필수 안내 페이지는 현재 위치를 탐색 메뉴에 표시한다', () => {
-    for (const name of ['about.html', 'data-sources.html', 'privacy.html', 'contact.html']) {
+    for (const name of ['about.html', 'data-sources.html', 'privacy.html', 'contact.html', 'terms.html', 'disclaimer.html']) {
         assert.match(readPage(name), /aria-current="page"/, name);
     }
 });
@@ -178,7 +224,7 @@ test('홈은 사이트맵의 모든 공개 clean URL을 직접 연결하고 lega
     for (const pathname of sitemapUrls.filter((pathname) => pathname !== '/')) {
         assert.match(home, new RegExp(`href="${pathname.replaceAll('-', '\\-')}"`), pathname);
     }
-    assert.doesNotMatch(publicHtml, /href="(?:\/)?(?:about|contact|data-sources|privacy)\.html(?:[#?"])/);
+    assert.doesNotMatch(publicHtml, /href="(?:\/)?(?:about|contact|data-sources|privacy|terms|disclaimer)\.html(?:[#?"])/);
 });
 
 test('공개 페이지 canonical은 운영 clean URL과 일치한다', () => {
@@ -186,7 +232,9 @@ test('공개 페이지 canonical은 운영 clean URL과 일치한다', () => {
         ['about.html', 'about'],
         ['data-sources.html', 'data-sources'],
         ['privacy.html', 'privacy'],
-        ['contact.html', 'contact']
+        ['contact.html', 'contact'],
+        ['terms.html', 'terms'],
+        ['disclaimer.html', 'disclaimer']
     ];
     for (const [name, slug] of supportPages) {
         assert.match(readPage(name), new RegExp(`<link rel="canonical" href="https://hospital-fee-calc\\.pages\\.dev/${slug}"`), name);

@@ -21,6 +21,8 @@ MEDICost는 공개 의료 자료를 참고해 병원비, 검사비, 입원비와
 - https://hospital-fee-calc.pages.dev/about
 - https://hospital-fee-calc.pages.dev/privacy
 - https://hospital-fee-calc.pages.dev/contact
+- https://hospital-fee-calc.pages.dev/terms
+- https://hospital-fee-calc.pages.dev/disclaimer
 
 ## 제공하는 정보
 

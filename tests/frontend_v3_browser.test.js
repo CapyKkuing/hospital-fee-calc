@@ -551,7 +551,7 @@ async function screenshot(cdp, name) {
         assert.deepStrictEqual(appConsoleEvents, []);
 
         const supportResults = [];
-        for (const page of ['about.html', 'data-sources.html', 'privacy.html', 'contact.html']) {
+        for (const page of ['about.html', 'data-sources.html', 'privacy.html', 'contact.html', 'terms.html', 'disclaimer.html']) {
             await navigate(cdp, `${baseUrl}/${page}`);
             const support = await evaluate(cdp, `({
                 page: ${JSON.stringify(page)},
