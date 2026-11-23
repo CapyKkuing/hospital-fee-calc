@@ -21,6 +21,8 @@ MEDICost는 공개 의료 자료를 참고해 병원비, 검사비, 입원비와
 - https://hospital-fee-calc.pages.dev/about
 - https://hospital-fee-calc.pages.dev/privacy
 - https://hospital-fee-calc.pages.dev/contact
+- https://hospital-fee-calc.pages.dev/terms
+- https://hospital-fee-calc.pages.dev/disclaimer
 
 ## 제공하는 정보
 
@@ -41,4 +43,4 @@ MEDICost는 공개 의료 자료를 참고해 병원비, 검사비, 입원비와
 
 ## 이용 방식
 
-계산기는 무료로 사용할 수 있습니다. 계산 입력은 필요한 계산에만 사용하며, 선택적 서비스 분석과 광고 처리는 개인정보 안내 페이지에서 확인할 수 있습니다.
+계산기는 무료로 사용할 수 있습니다. 계산 입력은 필요한 계산에만 사용하며, 선택적 서비스 분석과 광고 게재 여부는 개인정보 안내 페이지에서 확인할 수 있습니다.

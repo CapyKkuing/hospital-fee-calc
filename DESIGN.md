@@ -50,10 +50,10 @@
 - 기본 단위는 4px이다.
 - 토큰: `--space-1` 4px, `--space-2` 8px, `--space-3` 12px, `--space-4` 16px, `--space-5` 20px, `--space-6` 24px, `--space-8` 32px, `--space-10` 40px, `--space-12` 48px, `--space-16` 64px, `--space-20` 80px, `--space-24` 96px.
 - 최대 폭은 1200px, 모바일 좌우 여백은 16px이다.
-- 핵심 breakpoint는 768px과 1024px이다. 계산기 광고 배치는 1280px에서 PC 레일로 전환한다.
+- 핵심 breakpoint는 768px과 1024px이다.
 - 페이지 자체의 가로 스크롤은 허용하지 않는다. 표와 긴 데이터 목록만 내부 스크롤을 사용한다.
-- 계산기 셸은 `fixed-sidenav-shell` + `list-detail`이다. 광고 레일은 `auto` 열, 입력·결과 작업면은 항상 `minmax(0, 1fr)` 작업 그리드다.
-- 숨긴 광고는 named grid area 밖에 있으므로 입력 카드가 광고 열로 들어가지 않는다. 1280px 이상에서 입력·결과 2열은 남은 폭 전체를 쓴다. 빈 AdFit 칸은 iframe이 없으면 접는다.
+- 계산기 셸은 `fixed-sidenav-shell` + `list-detail`이다. 입력·결과 작업면은 항상 `minmax(0, 1fr)` 단일 열 작업 그리드다.
+- 2026-11-22부터 AdSense 심사 준비로 Kakao AdFit·쿠팡 파트너스 광고 칸과 스크립트를 모든 공개 페이지에서 제거했다(광고 레일 열 없음). 768px 이상에서 입력·결과 2열은 폭 전체를 쓴다. 광고를 다시 넣을 때는 `docs/TASK_HISTORY.md`의 2026-11-22 항목을 따른다.
 
 ## 5. Components
 

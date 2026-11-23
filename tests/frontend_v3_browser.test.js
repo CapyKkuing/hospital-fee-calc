@@ -7,7 +7,7 @@ const { CALCULATOR_SCRIPTS, DEFERRED_CALCULATOR_SCRIPTS } = require('../frontend
 const root = path.join(__dirname, '..');
 const frontend = path.join(root, 'frontend');
 const evidence = path.join(root, '.codex-progress', 'browser-qa');
-const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const serverPort = 4193;
 const debugPort = 9233;
 const baseUrl = `http://127.0.0.1:${serverPort}`;
@@ -147,7 +147,7 @@ async function screenshot(cdp, name) {
     const stamp = Date.now();
     const serverLog = fs.openSync(path.join(evidence, `server-${stamp}.log`), 'a');
     const chromeLog = fs.openSync(path.join(evidence, `chrome-${stamp}.log`), 'a');
-    const server = spawn('py', ['-3', '-c', staticServerScript], {
+    const server = spawn(...(process.platform === 'win32' ? ['py', ['-3', '-c', staticServerScript]] : ['python3', ['-c', staticServerScript]]), {
         cwd: frontend,
         stdio: ['ignore', serverLog, serverLog]
     });
@@ -156,6 +156,7 @@ async function screenshot(cdp, name) {
         '--disable-gpu',
         '--no-first-run',
         '--no-default-browser-check',
+        ...(process.env.CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
         `--remote-debugging-port=${debugPort}`,
         `--user-data-dir=${path.join(evidence, `profile-${stamp}`)}`,
         'about:blank'
@@ -197,8 +198,8 @@ async function screenshot(cdp, name) {
         assert.match(initial.consentSummary, /동의 거부/);
         assert.strictEqual(initial.heavyScripts, 0);
         assert.strictEqual(initial.analyticsRequests, 0);
-        assert.ok(initial.adRequests >= 1);
-        assert.deepStrictEqual(initial.adScripts, { kakao: 0, coupang: 1 });
+        assert.strictEqual(initial.adRequests, 0);
+        assert.deepStrictEqual(initial.adScripts, { kakao: 0, coupang: 0 });
         assert.ok(initial.overflow <= 0, `1280px 초기 가로 넘침: ${initial.overflow}`);
 
         await evaluate(cdp, `document.querySelector('[data-consent-essential]').focus()`);
@@ -229,34 +230,7 @@ async function screenshot(cdp, name) {
             { scripts: expectedCalculatorScriptCount, initialized: true, inert: false }
         );
         assert.doesNotMatch(loaded.date, /확인 불가|로드 후/);
-        await waitFor(cdp, `document.querySelectorAll('script[src*="t1.kakaocdn.net/kas/static/ba.min.js"]').length === 1`);
-        const activeAdFit = await evaluate(cdp, `(() => {
-            const active = document.querySelector('[data-adfit-active="true"]');
-            return {
-                slots: document.querySelectorAll('[data-adfit-active="true"]').length,
-                unit: active?.dataset.adfitUnit,
-                kakaoAreas: document.querySelectorAll('.kakao_ad_area').length
-            };
-        })()`);
-        assert.deepStrictEqual(activeAdFit, { slots: 1, unit: 'DAN-FwOH9Vn3dSU1pp97', kakaoAreas: 1 });
-
-        await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1000, height: 720, deviceScaleFactor: 1, mobile: false });
-        await sleep(300);
-        const resizedMobileAdFit = await evaluate(cdp, `(() => ({
-            slots: document.querySelectorAll('[data-adfit-active="true"]').length,
-            unit: document.querySelector('[data-adfit-active="true"]')?.dataset.adfitUnit,
-            kakaoAreas: document.querySelectorAll('.kakao_ad_area').length
-        }))()`);
-        assert.deepStrictEqual(resizedMobileAdFit, { slots: 1, unit: 'DAN-dmM66J0Ueo0AkcLo', kakaoAreas: 1 });
-
-        await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
-        await sleep(300);
-        const resizedDesktopAdFit = await evaluate(cdp, `(() => ({
-            slots: document.querySelectorAll('[data-adfit-active="true"]').length,
-            unit: document.querySelector('[data-adfit-active="true"]')?.dataset.adfitUnit,
-            kakaoAreas: document.querySelectorAll('.kakao_ad_area').length
-        }))()`);
-        assert.deepStrictEqual(resizedDesktopAdFit, { slots: 1, unit: 'DAN-FwOH9Vn3dSU1pp97', kakaoAreas: 1 });
+        assert.strictEqual(await evaluate(cdp, `document.querySelectorAll('.ad-slot, .kakao_ad_area, [data-adfit-unit], [data-coupang-id]').length`), 0);
 
         await sleep(1000);
         cdp.consoleEvents.length = 0;
@@ -284,17 +258,9 @@ async function screenshot(cdp, name) {
         assert.ok(selected.hospital && selected.treatment && selected.region);
         await evaluate(cdp, 'document.querySelector("[data-step-basic-result]").click()');
         await waitFor(cdp, 'document.getElementById("display_final_cost").textContent !== "0"');
-        assert.strictEqual(await evaluate(cdp, 'document.getElementById("result-ad-dialog").open'), true);
+        assert.strictEqual(await evaluate(cdp, 'document.getElementById("result-ad-dialog")'), null);
+        assert.strictEqual(await evaluate(cdp, 'document.querySelectorAll("dialog[open]").length'), 0);
         assert.notStrictEqual(await evaluate(cdp, 'document.getElementById("display_final_cost").textContent'), '0');
-        await waitFor(cdp, `document.querySelector('#result-ad-dialog [data-coupang-trigger="result-dialog"] iframe')`);
-        const resultCoupang = await evaluate(cdp, `(() => ({
-            genericLinks: document.querySelectorAll('#result-ad-dialog a[href*="www.coupang.com?lptag="]').length,
-            frameSrc: document.querySelector('#result-ad-dialog [data-coupang-trigger="result-dialog"] iframe')?.src || ''
-        }))()`);
-        assert.strictEqual(resultCoupang.genericLinks, 0);
-        assert.match(resultCoupang.frameSrc, /trackingCode=AF2104018/);
-        await evaluate(cdp, 'document.querySelector("#result-ad-dialog button[value=\\"continue\\"]").click()');
-        await waitFor(cdp, '!document.getElementById("result-ad-dialog").open');
         await waitFor(cdp, '!document.querySelector("[data-step-panel=\\\"3\\\"]").hidden');
         const basicResult = await evaluate(cdp, `({
             insuranceDisabled: document.getElementById('has_insurance').disabled,
@@ -553,22 +519,18 @@ async function screenshot(cdp, name) {
                     workspaceColumns: getComputedStyle(document.querySelector('.calculator-workspace')).gridTemplateColumns.split(' ').length,
                     formWidth: Math.round(document.querySelector('.form-card').getBoundingClientRect().width),
                     workspaceWidth: Math.round(document.querySelector('.calculator-workspace').getBoundingClientRect().width),
-                    topAdOrder: getComputedStyle(document.querySelector('.ad-slot--calc-bottom')).order,
-                    activeAdFitSlots: document.querySelectorAll('[data-adfit-active="true"]').length,
-                    activeAdFitUnit: document.querySelector('[data-adfit-active="true"]')?.dataset.adfitUnit || ''
+                    adSlots: document.querySelectorAll('.ad-slot, [data-adfit-unit], [data-coupang-id]').length
                 };
             })()`);
             viewportChecks.push(check);
             assert.ok(check.scrollWidth <= check.width, `${width}px 가로 넘침: ${check.scrollWidth - check.width}px`);
             assert.ok(check.minTouch >= 44, `${width}px 최소 터치 높이: ${check.minTouch}px ${JSON.stringify(check.smallTouches)}`);
             assert.strictEqual(check.resultPosition, width < 768 ? 'static' : 'sticky');
-            assert.strictEqual(check.appColumns, width < 1280 ? 1 : 3);
+            assert.strictEqual(check.appColumns, 1);
             assert.strictEqual(check.workspaceColumns, width < 768 ? 1 : 2);
-            assert.strictEqual(check.topAdOrder, width < 1280 ? '0' : '3');
-            assert.strictEqual(check.activeAdFitSlots, 1);
-            assert.strictEqual(check.activeAdFitUnit, width < 1280 ? 'DAN-dmM66J0Ueo0AkcLo' : 'DAN-FwOH9Vn3dSU1pp97');
+            assert.strictEqual(check.adSlots, 0);
             if (width >= 1280) {
-                assert.ok(check.formWidth >= 360, `${width}px 입력 카드가 광고 레일 폭으로 줄었습니다: ${check.formWidth}px`);
+                assert.ok(check.formWidth >= 360, `${width}px 입력 카드 폭이 좁습니다: ${check.formWidth}px`);
                 assert.ok(check.workspaceWidth >= width * 0.55, `${width}px 계산기 작업면이 PC 폭을 쓰지 않습니다: ${check.workspaceWidth}px`);
             }
             await screenshot(cdp, `${width}-hero.png`);
@@ -589,7 +551,7 @@ async function screenshot(cdp, name) {
         assert.deepStrictEqual(appConsoleEvents, []);
 
         const supportResults = [];
-        for (const page of ['about.html', 'data-sources.html', 'privacy.html', 'contact.html']) {
+        for (const page of ['about.html', 'data-sources.html', 'privacy.html', 'contact.html', 'terms.html', 'disclaimer.html']) {
             await navigate(cdp, `${baseUrl}/${page}`);
             const support = await evaluate(cdp, `({
                 page: ${JSON.stringify(page)},
@@ -612,7 +574,7 @@ async function screenshot(cdp, name) {
             document.querySelector('[data-consent-save]').click();
         })()`);
         await navigate(cdp, `${baseUrl}/hospital-cost-calculator.html`);
-        await waitFor(cdp, `document.getElementById('medicost-analytics') && document.querySelectorAll('script[src*="t1.kakaocdn.net/kas/static/ba.min.js"]').length === 2`);
+        await waitFor(cdp, `document.getElementById('medicost-analytics')`);
         await waitFor(cdp, `document.getElementById('medicost-analytics-loader')`);
         const optionalScriptsAfterConsent = await evaluate(cdp, `({
             analytics: document.getElementById('medicost-analytics')?.getAttribute('src'),
@@ -623,9 +585,9 @@ async function screenshot(cdp, name) {
         })`);
         assert.match(optionalScriptsAfterConsent.analytics, /assets\/js\/analytics\.js/);
         assert.strictEqual(optionalScriptsAfterConsent.analyticsLoader, true);
-        assert.strictEqual(optionalScriptsAfterConsent.kakaoScripts, 2);
-        assert.strictEqual(optionalScriptsAfterConsent.kakaoSlots, 2);
-        assert.ok(optionalScriptsAfterConsent.kakaoRequests >= 1);
+        assert.strictEqual(optionalScriptsAfterConsent.kakaoScripts, 0);
+        assert.strictEqual(optionalScriptsAfterConsent.kakaoSlots, 0);
+        assert.strictEqual(optionalScriptsAfterConsent.kakaoRequests, 0);
         await evaluate(cdp, `window.MEDICostConsent.saveConsent(false)`);
         const optionalScriptsAfterWithdrawal = await evaluate(cdp, `({
             analytics: Boolean(document.getElementById('medicost-analytics')),
@@ -634,7 +596,7 @@ async function screenshot(cdp, name) {
             kakaoScripts: document.querySelectorAll('script[src*="t1.kakaocdn.net/kas/static/ba.min.js"]').length,
             kakaoSlots: document.querySelectorAll('.kakao_ad_area').length
         })`);
-        assert.deepStrictEqual(optionalScriptsAfterWithdrawal, { analytics: false, analyticsLoader: false, analyticsDisabled: true, kakaoScripts: 2, kakaoSlots: 2 });
+        assert.deepStrictEqual(optionalScriptsAfterWithdrawal, { analytics: false, analyticsLoader: false, analyticsDisabled: true, kakaoScripts: 0, kakaoSlots: 0 });
 
         const report = { initial, loaded, validation, selected, telemetrySearchRequestCount: telemetrySearchRequests.length, preserved, result, scenarioResults, viewportChecks, reducedMotion, optionalRequests, vendorConsoleEvents, appConsoleEvents, supportResults, optionalScriptsAfterConsent, optionalScriptsAfterWithdrawal };
         fs.writeFileSync(path.join(evidence, 'results.json'), JSON.stringify(report, null, 2));
