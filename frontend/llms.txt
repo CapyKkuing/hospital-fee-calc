@@ -17,6 +17,21 @@ MEDICost는 공개 의료 자료를 참고해 병원비, 검사비, 입원비와
 - https://hospital-fee-calc.pages.dev/knee-mri-cost
 - https://hospital-fee-calc.pages.dev/sedation-endoscopy-cost
 - https://hospital-fee-calc.pages.dev/copay-rate-guide
+- https://hospital-fee-calc.pages.dev/shoulder-mri-cost
+- https://hospital-fee-calc.pages.dev/hip-mri-cost
+- https://hospital-fee-calc.pages.dev/ankle-mri-cost
+- https://hospital-fee-calc.pages.dev/lumbar-mri-cost
+- https://hospital-fee-calc.pages.dev/cervical-mri-cost
+- https://hospital-fee-calc.pages.dev/brain-mri-cost
+- https://hospital-fee-calc.pages.dev/heart-ultrasound-cost
+- https://hospital-fee-calc.pages.dev/breast-ultrasound-cost
+- https://hospital-fee-calc.pages.dev/pelvic-ultrasound-cost
+- https://hospital-fee-calc.pages.dev/thyroid-ultrasound-cost
+- https://hospital-fee-calc.pages.dev/pulmonary-function-test-cost
+- https://hospital-fee-calc.pages.dev/brain-ct-cost
+- https://hospital-fee-calc.pages.dev/chest-ct-cost
+- https://hospital-fee-calc.pages.dev/abdominal-ct-cost
+- https://hospital-fee-calc.pages.dev/spine-ct-cost
 - https://hospital-fee-calc.pages.dev/data-sources
 - https://hospital-fee-calc.pages.dev/about
 - https://hospital-fee-calc.pages.dev/privacy
@@ -30,6 +45,7 @@ MEDICost는 공개 의료 자료를 참고해 병원비, 검사비, 입원비와
 - MRI, CT, 내시경 등 검사비 참고 범위
 - 입원일수와 병실 조건을 반영한 입원비 참고 범위
 - 비급여 검사·시술의 지역·의료기관별 참고 범위
+- 부위별 MRI·CT·초음파, 폐기능검사의 건강보험 수가와 병원 종류별 예상 본인부담금 안내
 
 ## 데이터 출처
 

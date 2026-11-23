@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const frontend = path.join(__dirname, '..', 'frontend');
 const pages = ['index.html', 'about.html', 'data-sources.html', 'privacy.html', 'contact.html', 'terms.html', 'disclaimer.html'];
@@ -16,11 +17,53 @@ const seoPages = [
     ['manual-therapy-cost.html', 'manual-therapy-cost', '도수치료'],
     ['knee-mri-cost.html', 'knee-mri-cost', '무릎 MRI'],
     ['sedation-endoscopy-cost.html', 'sedation-endoscopy-cost', '수면내시경'],
-    ['copay-rate-guide.html', 'copay-rate-guide', '본인부담률']
+    ['copay-rate-guide.html', 'copay-rate-guide', '본인부담률'],
+    ['shoulder-mri-cost.html', 'shoulder-mri-cost', '어깨 MRI'],
+    ['hip-mri-cost.html', 'hip-mri-cost', '고관절 MRI'],
+    ['ankle-mri-cost.html', 'ankle-mri-cost', '발목 MRI'],
+    ['lumbar-mri-cost.html', 'lumbar-mri-cost', '허리 MRI'],
+    ['cervical-mri-cost.html', 'cervical-mri-cost', '경추 MRI'],
+    ['brain-mri-cost.html', 'brain-mri-cost', '뇌 MRI'],
+    ['heart-ultrasound-cost.html', 'heart-ultrasound-cost', '심장 초음파'],
+    ['breast-ultrasound-cost.html', 'breast-ultrasound-cost', '유방 초음파'],
+    ['pelvic-ultrasound-cost.html', 'pelvic-ultrasound-cost', '자궁 초음파'],
+    ['thyroid-ultrasound-cost.html', 'thyroid-ultrasound-cost', '갑상선 초음파'],
+    ['pulmonary-function-test-cost.html', 'pulmonary-function-test-cost', '폐기능검사'],
+    ['brain-ct-cost.html', 'brain-ct-cost', '뇌 CT'],
+    ['chest-ct-cost.html', 'chest-ct-cost', '흉부 CT'],
+    ['abdominal-ct-cost.html', 'abdominal-ct-cost', '복부 CT'],
+    ['spine-ct-cost.html', 'spine-ct-cost', '척추 CT']
 ];
 
 function readPage(name) {
     return fs.readFileSync(path.join(frontend, name), 'utf8');
+}
+
+// 2026-11-23 추가 비용 안내 페이지: 표·요약 숫자의 근거가 되는 데이터 코드.
+// nonbenefit = 비급여 지역 가격 코드, fee = 본인부담금 표의 열(수가 코드 묶음, 여러 개면 합산).
+// 첫 번째 nonbenefit 코드의 서울 중간값과 첫 번째 fee 열의 의원 본인부담금이 페이지 첫 문단·description의 대표 숫자다.
+const costGuides = [
+    { slug: 'shoulder-mri-cost', nonbenefit: ['HE5150000'], fee: [['HE115'], ['HE215'], ['HE515']] },
+    { slug: 'hip-mri-cost', nonbenefit: ['HE5180000'], fee: [['HE118'], ['HE218']] },
+    { slug: 'ankle-mri-cost', nonbenefit: ['HE5210000', 'HE5230000'], fee: [['HE121'], ['HE221']] },
+    { slug: 'lumbar-mri-cost', nonbenefit: ['HE5120000'], fee: [['HI111', 'HJ111'], ['HI211', 'HJ211']] },
+    { slug: 'cervical-mri-cost', nonbenefit: ['HE5110000'], fee: [['HI109', 'HJ109'], ['HI209', 'HJ209'], ['HI509', 'HJ509']] },
+    { slug: 'brain-mri-cost', nonbenefit: ['HE5010000', 'HE5020000'], fee: [['HI101', 'HJ101'], ['HI201', 'HJ201'], ['HI501', 'HJ501']] },
+    { slug: 'heart-ultrasound-cost', nonbenefit: ['EB4210000'], fee: [['EB431'], ['EB432'], ['EB433']] },
+    { slug: 'breast-ultrasound-cost', nonbenefit: [], fee: [['EB421'], ['EB423'], ['HA181'], ['HA182']] },
+    { slug: 'pelvic-ultrasound-cost', nonbenefit: [], fee: [['EB455'], ['EB457'], ['EB456']] },
+    { slug: 'thyroid-ultrasound-cost', nonbenefit: [], fee: [['EB414']] },
+    { slug: 'pulmonary-function-test-cost', nonbenefit: [], fee: [['F6001'], ['F6002'], ['F6010']] },
+    { slug: 'brain-ct-cost', nonbenefit: [], fee: [['HA451'], ['HA461'], ['HA531']] },
+    { slug: 'chest-ct-cost', nonbenefit: [], fee: [['HA434'], ['HA464'], ['HA444']] },
+    { slug: 'abdominal-ct-cost', nonbenefit: [], fee: [['HA465'], ['HA435'], ['HA425']] },
+    { slug: 'spine-ct-cost', nonbenefit: [], fee: [['HA456'], ['HA466'], ['HA459']] }
+];
+
+function loadWindowData(file, key) {
+    const sandbox = { window: {} };
+    vm.runInNewContext(readPage(file).replace(/^\uFEFF/, ''), sandbox);
+    return sandbox.window[key];
 }
 
 function test(name, run) {
@@ -288,6 +331,80 @@ test('공개 SEO 페이지의 JSON-LD와 크롤링 파일은 대표 URL과 일�
     }
     assert.doesNotMatch(llms, /(?:�|癰|沅|쑴|쎿)/);
     assert.strictEqual(key.trim(), 'medicost-pages-20260712');
+});
+
+test('비용 안내 페이지의 금액은 수가·비급여 데이터 파일에서 다시 계산한 값과 일치한다', () => {
+    const feeData = loadWindowData('assets/js/fee_schedule_items.js', 'PUBLIC_FEE_SCHEDULE_ITEMS');
+    const nonbenefitData = loadWindowData('assets/js/nonbenefit_data.js', 'NONBENEFIT_REGION_PRICES');
+    const feeByCode = new Map(feeData.items.map((item) => [item.publicActionCode, item]));
+    const outpatientRates = [['의원', 30, 'clinicPrice'], ['병원', 40, 'hospitalPrice'], ['종합병원', 50, 'hospitalPrice'], ['상급종합병원', 60, 'hospitalPrice']];
+
+    const won = (value) => `${value.toLocaleString('ko-KR')}원`;
+    const roundTo100 = (value) => Math.round(value / 100) * 100;
+    const man = (value) => `${value / 10000}만 원`;
+    // knee-mri-cost.html과 같은 표기: 표는 100원 단위 반올림, 요약 문장은 천 원 단위 반올림(2만 원 미만은 100원 단위).
+    const summaryAmount = (value) => {
+        if (value < 20000) return won(roundTo100(value));
+        const thousands = Math.round(value / 1000);
+        return `${Math.floor(thousands / 10)}만${thousands % 10 ? ` ${thousands % 10}천` : ''} 원`;
+    };
+    const koreanDate = (value) => {
+        const [, year, month, day] = value.replace(/-/g, '').match(/^(\d{4})(\d{2})(\d{2})$/);
+        return { year: Number(year), month: Number(month), day: Number(day) };
+    };
+    const feeDate = koreanDate(feeData.sourceDate);
+    const fetched = koreanDate(nonbenefitData.fetchedAt);
+    const sumPrice = (codes, field) => codes.reduce((sum, code) => {
+        const item = feeByCode.get(code);
+        assert.ok(item, `수가 코드 ${code}가 fee_schedule_items.js에 없습니다`);
+        assert.ok(Number.isInteger(item[field]) && item[field] > 0, `${code}.${field}`);
+        return sum + item[field];
+    }, 0);
+
+    assert.strictEqual(costGuides.length, 15);
+    for (const guide of costGuides) {
+        const name = `${guide.slug}.html`;
+        const html = readPage(name);
+        const lead = html.match(/<h1>[^<]+<\/h1>\s*<p>([\s\S]*?)<\/p>/)[1];
+        const description = html.match(/<meta name="description" content="([^"]+)"/)[1];
+        const headline = [];
+
+        guide.nonbenefit.forEach((code, index) => {
+            const item = nonbenefitData.items[code];
+            assert.ok(item, `${name}: 비급여 코드 ${code}`);
+            const regions = Object.values(item.regions);
+            for (const region of regions) {
+                const row = `<tr><td>${region.name}</td><td>${man(region.median)}</td><td>${region.min / 10000}만~${region.max / 10000}만 원</td></tr>`;
+                assert.ok(html.includes(row), `${name}: ${code} ${region.name} 비급여 가격이 데이터와 다릅니다 (${row})`);
+            }
+            const effective = koreanDate(item.effectiveFrom);
+            assert.ok(html.includes(`${effective.year}년 ${effective.month}월 적용분, ${fetched.year}년 ${fetched.month}월 ${fetched.day}일 조회`), `${name}: ${code} 비급여 자료 기준일`);
+            if (index === 0) headline.push(man(regions.find((region) => region.name === '서울').median));
+        });
+
+        guide.fee.forEach((codes, index) => {
+            for (const code of codes) assert.ok(html.includes(code), `${name}: 수가 코드 ${code} 표기`);
+            const clinic = sumPrice(codes, 'clinicPrice');
+            const hospital = sumPrice(codes, 'hospitalPrice');
+            assert.ok(html.includes(won(clinic)), `${name}: ${codes.join('+')} 의원 수가 ${won(clinic)}`);
+            assert.ok(html.includes(won(hospital)), `${name}: ${codes.join('+')} 병원급 수가 ${won(hospital)}`);
+            outpatientRates.forEach(([label, percent, field]) => {
+                const copay = sumPrice(codes, field) * percent / 100;
+                const cell = `<td>약 ${won(roundTo100(copay))}</td>`;
+                assert.ok(html.includes(cell), `${name}: ${codes.join('+')} ${label} 본인부담금 ${cell}`);
+                assert.ok(html.includes(`${label} (${percent}%)`) || html.includes(`<td>${label}</td><td>${percent}%</td>`), `${name}: ${label} 본인부담률 표기`);
+            });
+            if (index === 0) headline.push(summaryAmount(clinic * 30 / 100));
+        });
+
+        for (const text of headline) {
+            assert.ok(lead.includes(text), `${name}: 첫 문단의 대표 숫자(${text})가 데이터와 다릅니다`);
+            assert.ok(description.includes(text), `${name}: description의 대표 숫자(${text})가 데이터와 다릅니다`);
+        }
+        assert.ok(html.includes(`${feeDate.year}년 ${feeDate.month}월 ${feeDate.day}일 기준 건강보험 행위 급여 목록`), `${name}: 급여 수가 기준일`);
+        assert.match(html, /<p class="eyebrow">검사비 안내 · 2026년 공개 자료 기준<\/p>/, name);
+        assert.match(html, /실제 수납 금액은 병원에 확인하세요/, name);
+    }
 });
 
 test('AdSense 심사 전에는 공개 페이지에 Kakao AdFit·쿠팡 파트너스 광고와 운영자용 광고 안내를 두지 않는다', () => {
