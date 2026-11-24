@@ -96,7 +96,8 @@ const DB = {
         tuberculosis: { name: "결핵 산정특례 대상자", rate: 0.00 }
     },
     NON_BENEFIT_PUBLIC_PRICE_DATA: {
-        reference: "국민건강보험 비급여 항목별 가격정보 공개 화면, 2026-05-23 확인",
+        // 지역별 자료를 못 불러왔을 때만 쓰는 전국 중간값 (심평원 비급여 진료비용 정보, 2026년 공개자료, 2026-11-23 조회)
+        reference: "심평원 공개자료 기준 전국 중간값(참고용), 조회일 2026-11-23, 병원마다 다를 수 있음",
         defaultRegion: "national",
         regions: {
             national: { name: "전국" }
@@ -104,23 +105,23 @@ const DB = {
         items: {
             PR_RE04: {
                 nhisCode: "MX1220000",
-                nhisName: "도수치료",
+                nhisName: "이학요법료/도수치료",
                 regionPrices: {
-                    national: { median: 100000, min: 30000 }
+                    national: { median: 100000, min: 0 }
                 }
             },
             IM_MR05: {
-                nhisCode: "HE5200000",
-                nhisName: "슬관절 MRI 3차원",
+                nhisCode: "HE1200000",
+                nhisName: "자기공명영상진단료(MRI-기본검사)/근골격계-슬관절/일반",
                 regionPrices: {
-                    national: { median: 550000, min: 400000 }
+                    national: { median: 450000, min: 100000 }
                 }
             },
             IM_MR06: {
-                nhisCode: "HE5150000",
-                nhisName: "견관절 MRI 3차원",
+                nhisCode: "HE1150000",
+                nhisName: "자기공명영상진단료(MRI-기본검사)/근골격계-견관절/일반",
                 regionPrices: {
-                    national: { median: 550000, min: 400000 }
+                    national: { median: 450000, min: 100000 }
                 }
             }
         }
@@ -675,7 +676,11 @@ function renderResultInsights(breakdown, patientTotalPay, options) {
 
     const region = document.getElementById('nonbenefit_region');
     const regionLabel = region?.selectedOptions?.[0]?.textContent?.trim() || '선택 지역';
-    const sources = [regionLabel + ' 비급여 공개자료 기준을 우선 반영했습니다.'];
+    const nonBenefitRows = breakdown.filter(item => item.type === 'non-benefit');
+    const publicRows = nonBenefitRows.filter(item => item.name.includes('[심평원 공개자료'));
+    const sources = [];
+    if (publicRows.length) sources.push('공개자료가 있는 비급여 항목은 심평원 공개자료의 ' + regionLabel + ' 중간값(참고용)을 반영했고, 병원마다 다를 수 있습니다.');
+    if (nonBenefitRows.length > publicRows.length) sources.push('공개자료가 없는 비급여 항목은 자체 추정가를 썼습니다.');
     if (options.diseaseStats && !options.hasSpecificSelectedItems) sources.push('상병코드 평균 진료비를 함께 반영했습니다.');
     if (options.hasInsurance) sources.push('실손보험 예상 환급금을 최종 부담금에 반영했습니다.');
     else sources.push('실손보험은 반영하지 않았습니다.');
@@ -1083,6 +1088,11 @@ async function initializeDataSources() {
     renderDataSourceStatus();
 }
 
+// 심평원 활용 유의사항: 병원 홍보·환자 유인으로 읽히지 않도록 참고용임을 함께 표시한다.
+function formatNonBenefitSourceText(fetchedAt) {
+    return `심평원 공개자료 기준 지역별 중간값(참고용), 조회일 ${fetchedAt || '확인 불가'}, 병원마다 다를 수 있음`;
+}
+
 function loadStaticNonBenefitData() {
     if (typeof window === 'undefined') return;
     if (!window.NONBENEFIT_REGION_PRICES || !window.NONBENEFIT_CODE_MAP) return;
@@ -1091,7 +1101,7 @@ function loadStaticNonBenefitData() {
     nonBenefitDataState.prices = window.NONBENEFIT_REGION_PRICES;
     nonBenefitDataState.codeMap = window.NONBENEFIT_CODE_MAP;
     nonBenefitDataState.sourceType = 'static';
-    nonBenefitDataState.statusText = `정적 공개자료 사용 중 (${window.NONBENEFIT_REGION_PRICES.fetchedAt || '수집일 미상'} 기준)`;
+    nonBenefitDataState.statusText = formatNonBenefitSourceText(window.NONBENEFIT_REGION_PRICES.fetchedAt);
 }
 
 async function loadBackendNonBenefitData() {
@@ -1117,7 +1127,7 @@ async function loadBackendNonBenefitData() {
         nonBenefitDataState.prices = prices;
         nonBenefitDataState.codeMap = codeMap;
         nonBenefitDataState.sourceType = 'backend';
-        nonBenefitDataState.statusText = `백엔드 최신자료 사용 중 (${prices.fetchedAt || '갱신일 미상'} 기준)`;
+        nonBenefitDataState.statusText = formatNonBenefitSourceText(prices.fetchedAt);
     } catch (error) {
         // 백엔드가 아직 없거나 일시 실패해도 정적 자료로 계산을 계속한다.
     }
@@ -1227,12 +1237,12 @@ function getExternalPublicNonBenefitPriceInfo(item) {
         avg: regionPrice.avg,
         median: regionPrice.median,
         metric,
-        metricLabel: metric === 'median' ? '중앙값' : '평균값',
+        metricLabel: metric === 'median' ? '중간값' : '평균값',
         regionName: regionPrice.name || selectedRegion,
         nhisCode: mapping.publicCode,
         nhisName: mapping.publicName || publicItem.name,
         effectiveFrom: publicItem.effectiveFrom,
-        reference: `${externalData.prices.source || '비급여 공개자료'} (${externalData.prices.fetchedAt || '수집일 미상'} 수집)`
+        reference: formatNonBenefitSourceText(externalData.prices.fetchedAt)
     };
 }
 
@@ -1249,7 +1259,7 @@ function getFallbackPublicNonBenefitPriceInfo(item) {
         price: regionPrice.median,
         min: regionPrice.min,
         metric: 'median',
-        metricLabel: '중앙값',
+        metricLabel: '중간값',
         regionName: fallbackRegion.name,
         nhisCode: publicItem.nhisCode,
         nhisName: publicItem.nhisName,
@@ -1260,6 +1270,14 @@ function getFallbackPublicNonBenefitPriceInfo(item) {
 function getPublicNonBenefitPriceInfo(item) {
     if (!item || item.isBenefit) return null;
     return getExternalPublicNonBenefitPriceInfo(item) || getFallbackPublicNonBenefitPriceInfo(item);
+}
+
+// 검색 목록에 보이는 가격: 비급여는 계산 결과와 같은 심평원 공개 중간값을 우선 표시
+function getSearchListPrice(item) {
+    if (!item) return 0;
+    if (item.isBenefit) return item.price;
+    const info = getPublicNonBenefitPriceInfo({ type: item.code, isBenefit: false });
+    return info ? info.price : item.price;
 }
 
 function getNonBenefitBasePrice(item) {
@@ -1274,7 +1292,7 @@ function getNonBenefitBasePrice(item) {
 
     return {
         price: publicPriceInfo.price,
-        labelSuffix: ` [${publicPriceInfo.regionName} 기준 공개 ${publicPriceInfo.metricLabel} · ${publicPriceInfo.nhisCode}]`,
+        labelSuffix: ` [심평원 공개자료 ${publicPriceInfo.regionName} ${publicPriceInfo.metricLabel}(참고용) · ${publicPriceInfo.nhisCode}]`,
         publicPriceInfo
     };
 }
@@ -1654,7 +1672,7 @@ function performSearch(query, targetGroup, options = {}) {
                     <span class="search-result-keywords">동의어: ${keywordSnippet}</span>
                 </div>
                 <div class="search-result-meta">
-                    <span class="search-result-price">${formatNumber(item.price)}원</span>
+                    <span class="search-result-price">${formatNumber(getSearchListPrice(item))}원</span>
                     ${benefitBadge}
                     <span class="btn-result-add"><i data-lucide="plus" style="width:12px; height:12px;"></i> 추가</span>
                 </div>
@@ -2004,7 +2022,7 @@ function renderSearchResults(query, targetGroup, resultsList, items) {
                     <span class="search-result-keywords">${subLabel}${detailLabel ? ` · ${detailLabel}` : ''}${code ? ` · 코드 ${code}` : ''}</span>
                 </div>
                 <div class="search-result-meta">
-                    <span class="search-result-price">${formatNumber(item.price)}원</span>
+                    <span class="search-result-price">${formatNumber(getSearchListPrice(item))}원</span>
                     ${benefitBadge}
                     <span class="btn-result-add"><i data-lucide="plus" style="width:12px;height:12px;"></i> 추가</span>
                 </div>
@@ -2185,7 +2203,7 @@ function finalRenderItemResults(query, targetGroup, items) {
                 <span class="search-result-keywords">${subLabel}${detailLabel ? ` · ${detailLabel}` : ''}${code ? ` · 코드 ${code}` : ''}</span>
             </div>
             <div class="search-result-meta">
-                <span class="search-result-price">${formatNumber(item.price)}원</span>
+                <span class="search-result-price">${formatNumber(getSearchListPrice(item))}원</span>
                 ${benefitBadge}
                 <span class="btn-result-add">추가</span>
             </div>
@@ -4155,7 +4173,7 @@ function performSearch(query, targetGroup, options = {}) {
                         <span class="search-result-keywords">동의어: ${keywordSnippet}</span>
                     </div>
                     <div class="search-result-meta">
-                        <span class="search-result-price">${formatNumber(item.price)}원</span>
+                        <span class="search-result-price">${formatNumber(getSearchListPrice(item))}원</span>
                         ${benefitBadge}
                         <span class="btn-result-add"><i data-lucide="plus" style="width:12px; height:12px;"></i> 추가</span>
                     </div>
@@ -4808,7 +4826,7 @@ function performSearch(query, targetGroup, options = {}) {
                         <span class="search-result-keywords">동의어: ${keywordSnippet}</span>
                     </div>
                     <div class="search-result-meta">
-                        <span class="search-result-price">${formatNumber(item.price)}원</span>
+                        <span class="search-result-price">${formatNumber(getSearchListPrice(item))}원</span>
                         ${benefitBadge}
                         <span class="btn-result-add"><i data-lucide="plus" style="width:12px; height:12px;"></i> 추가</span>
                     </div>
@@ -4983,7 +5001,7 @@ function eofRenderItemResults(query, targetGroup, items) {
                 <span class="search-result-name"><span class="badge badge-benefit" style="padding:0.15rem 0.35rem;font-size:0.68rem;margin-right:0.4rem;">${labels[group] || group}</span>${item.name}</span>
                 <span class="search-result-keywords">${sub}${detail ? ` ? ${detail}` : ''}${code ? ` ? ?? ${code}` : ''}</span>
             </div>
-            <div class="search-result-meta"><span class="search-result-price">${formatNumber(item.price)}?</span>${benefit}<span class="btn-result-add">??</span></div>
+            <div class="search-result-meta"><span class="search-result-price">${formatNumber(getSearchListPrice(item))}?</span>${benefit}<span class="btn-result-add">??</span></div>
         `;
         btn.onclick = () => {
             if (typeof window.trackGAEvent === 'function') {
@@ -5268,7 +5286,7 @@ function renderHierarchicalItemsList(mainVal, subVal, detailVal = 'all') {
                 <span class="search-result-name"><span class="badge badge-benefit" style="padding:0.15rem 0.35rem;font-size:0.68rem;margin-right:0.4rem;">${safeBenefitLabel}</span>${safeName}</span>
                 <span class="search-result-keywords">${code ? `${escapeHtml(EOF2_TEXT.code)} ${safeCode}` : ''}</span>
             </div>
-            <div class="search-result-meta"><span class="search-result-price">${escapeHtml(formatNumber(item.price))}${escapeHtml(EOF2_TEXT.won)}</span><span class="btn-result-add">${escapeHtml(EOF2_TEXT.add)}</span></div>
+            <div class="search-result-meta"><span class="search-result-price">${escapeHtml(formatNumber(getSearchListPrice(item)))}${escapeHtml(EOF2_TEXT.won)}</span><span class="btn-result-add">${escapeHtml(EOF2_TEXT.add)}</span></div>
         `;
         btn.onclick = () => {
             addHiraItem(item);
@@ -5343,7 +5361,7 @@ function eofRenderItemResults(query, targetGroup, items) {
         const safeCode = escapeHtml(code);
         const safePrice = item.estimateRange
             ? `${escapeHtml(formatNumber(item.estimateRange.min))}~${escapeHtml(formatNumber(item.estimateRange.max))}${escapeHtml(EOF2_TEXT.won)}`
-            : `${escapeHtml(formatNumber(item.price))}${escapeHtml(EOF2_TEXT.won)}`;
+            : `${escapeHtml(formatNumber(getSearchListPrice(item)))}${escapeHtml(EOF2_TEXT.won)}`;
         const estimateMeta = item.estimateKind
             ? ` / 공식 수가 ${escapeHtml(item.estimateSampleCount)}개 중앙값 ${escapeHtml(formatNumber(item.price))}${escapeHtml(EOF2_TEXT.won)}`
             : '';
@@ -5482,7 +5500,7 @@ function renderHierarchicalItemsList(mainVal, subVal, detailVal = 'all') {
                 <span class="search-result-name"><span class="badge badge-benefit" style="padding:0.15rem 0.35rem;font-size:0.68rem;margin-right:0.4rem;">${safeBenefitLabel}</span>${safeName}</span>
                 <span class="search-result-keywords">${code ? `${escapeHtml(EOF2_TEXT.code)} ${safeCode}` : ''}</span>
             </div>
-            <div class="search-result-meta"><span class="search-result-price">${escapeHtml(formatNumber(item.price))}${escapeHtml(EOF2_TEXT.won)}</span><span class="btn-result-add">${escapeHtml(EOF2_TEXT.add)}</span></div>
+            <div class="search-result-meta"><span class="search-result-price">${escapeHtml(formatNumber(getSearchListPrice(item)))}${escapeHtml(EOF2_TEXT.won)}</span><span class="btn-result-add">${escapeHtml(EOF2_TEXT.add)}</span></div>
         `;
         btn.onclick = () => {
             addHiraItem(item);
@@ -5579,7 +5597,7 @@ function renderSearchResults(query, targetGroup, resultsList, items) {
                 <span class="search-result-keywords">${escapeHtml(subLabel)}${detailLabel ? ` / ${escapeHtml(detailLabel)}` : ''}${code ? ` / 코드 ${escapeHtml(code)}` : ''}</span>
             </div>
             <div class="search-result-meta">
-                <span class="search-result-price">${escapeHtml(formatNumber(item.price))}원</span>
+                <span class="search-result-price">${escapeHtml(formatNumber(getSearchListPrice(item)))}원</span>
                 ${benefitBadge}
                 <span class="btn-result-add"><i data-lucide="plus" style="width:12px;height:12px;"></i> 추가</span>
             </div>

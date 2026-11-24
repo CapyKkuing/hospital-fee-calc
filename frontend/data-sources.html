@@ -19,7 +19,7 @@
         <header class="support-hero"><p class="eyebrow">데이터 출처</p><h1>계산에 사용한 자료를 숨기지 않습니다</h1><p>화면의 기준일은 정적 데이터 파일에 기록된 날짜를 직접 읽어 표시합니다. 아래 자료는 예상 범위를 만드는 참고값이며 실제 청구 기준과 차이가 날 수 있습니다.</p></header>
         <div class="support-content">
             <section class="support-section"><h2>급여 수가</h2><div><p>건강보험심사평가원의 의·치과 급여 수가 반영 내역을 정리한 정적 데이터셋을 사용합니다.</p><ul><li>파일의 <code>sourceDate</code> 값을 계산기 화면에 직접 표시</li><li>코드·항목명·병원 종별 가격을 검색과 계산에 사용</li><li>병원 등급별 가산과 본인부담률을 별도로 반영</li></ul></div></section>
-            <section class="support-section"><h2>비급여 가격</h2><div><p>국민건강보험 비급여 항목별 가격정보 공개 화면에서 확인한 대표 항목과 프로젝트에 포함된 지역별 공개자료를 사용합니다.</p><ul><li>파일의 <code>fetchedAt</code> 값을 계산기 화면에 직접 표시</li><li>지역 중앙값을 우선 사용하고, 없으면 평균값 또는 기존 추정값 사용</li><li>병원별 실제 가격과 선택 항목에 따라 큰 차이가 날 수 있음</li></ul></div></section>
+            <section class="support-section"><h2>비급여 가격</h2><div><p>건강보험심사평가원 비급여 진료비용 정보의 지역별 금액 비교(의료기관 규모 전체, 2026년 공개자료)에서 조회한 지역별 중간값을 참고용으로 사용합니다.</p><ul><li>파일의 <code>fetchedAt</code>(조회일) 값을 계산기 화면에 직접 표시</li><li>지역 중간값을 우선 사용하고, 없으면 평균값 또는 기존 추정값 사용</li><li>심평원 코드와 정확히 맞출 수 없는 항목은 공개 가격을 쓰지 않음</li><li>병원별 실제 가격과 선택 항목에 따라 큰 차이가 날 수 있음</li></ul></div></section>
             <section class="support-section"><h2>상병·진료 통계</h2><div><p>2024년 공공데이터 CSV에서 만든 상병코드별 평균 진료비 통계를 참고합니다. 사용자가 검사·시술·수술을 직접 추가하지 않은 경우에만 평균값을 계산에 반영합니다.</p></div></section>
             <section class="support-section"><h2>업데이트와 한계</h2><div><p>자료의 시행일과 수집일은 서로 다를 수 있습니다. 새 고시나 공개자료가 배포되어도 정적 파일이 갱신되기 전에는 이전 기준이 표시될 수 있습니다.</p><p class="support-note">최종 비용 확인이 필요하면 방문할 병원과 가입한 보험사에 직접 문의하세요.</p><div class="support-actions"><a class="button-primary" href="/#calculator">예상 금액 계산</a></div></div></section>
         </div>

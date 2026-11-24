@@ -140,3 +140,12 @@
 - 백업 `C:/Users/giro0/Desktop/Claude/backup/2026-11-11-search-analytics-db.sql` → 로컬 사본 미리 실행(재실행 중복 없음) → 운영 적용.
 - 적용 후: approved 29, rejected 23, pending 0. `/api/search-aliases`에 요소검사 2건 확인, 운영 수가표에 두 코드 존재 확인. 화면 검색창은 통계 동의가 필요해 직접 검색은 검증 못함.
 - commit 안 함(승인 대기).
+
+## 2026-11-16 주간 무결과 검색어 정리 (11-15 수집분)
+
+- pending 2건. `해열제` → 약품 분류명이라 제외(rejected). `두통 수액` → 정맥내점적주사 급여 코드가 용량별 3개(FEE_KK051·KK052·KK053)이고 비급여 영양수액일 수도 있어 질문(C)으로 pending 유지.
+- SQL: `database/search-aliases-2026-11-16.sql`(해열제 제외 UPDATE 1건), 테스트 추가(`tests/unmatched_search_aliases.test.js`), 전체 테스트 통과.
+- 백업 `C:/Users/giro0/Desktop/Claude/backup/2026-11-16-search-analytics-db.sql` → 임시 로컬 사본 미리 실행(2회, 결과 동일) → 운영 적용.
+- 적용 후: approved 29, rejected 24, pending 1(두통 수액). `/api/search-aliases`는 적용 전후 동일(새 별칭 없음).
+- 11-11 회차 파일은 커밋 a9bef352 로 저장됨. 이번 회차는 commit 안 함(승인 대기).
+- 사용자 답변(2026-11-16) '제외' → `두통 수액`도 rejected. 같은 SQL 파일에 추가, 테스트 통과, 백업 `C:/Users/giro0/Desktop/Claude/backup/2026-11-16b-search-analytics-db.sql` → 미리 실행 → 운영 적용. 최종: approved 29, rejected 25, pending 0. `/api/search-aliases` 변동 없음.

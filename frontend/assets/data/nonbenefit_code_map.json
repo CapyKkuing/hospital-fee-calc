@@ -2,403 +2,519 @@
   "PR_RE04": {
     "appName": "도수치료 (비급여 손 치료 1회)",
     "publicCode": "MX1220000",
-    "publicName": "도수치료",
+    "publicName": "이학요법료/도수치료",
     "match": "exact"
   },
   "PR_MANUAL": {
     "appName": "도수치료 (비급여)",
     "publicCode": "MX1220000",
-    "publicName": "도수치료",
+    "publicName": "이학요법료/도수치료",
     "match": "exact"
   },
   "IM_MR05": {
     "appName": "슬관절 MRI (무릎)",
-    "publicCode": "HE5200000",
-    "publicName": "슬관절 MRI",
-    "match": "exact"
+    "publicCode": "HE1200000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-슬관절/일반",
+    "match": "exact",
+    "previousCode": "HE5200000"
   },
   "IMAGING_MRI_KNEE": {
     "appName": "무릎 MRI",
-    "publicCode": "HE5200000",
-    "publicName": "슬관절 MRI",
-    "match": "exact"
+    "publicCode": "HE1200000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-슬관절/일반",
+    "match": "exact",
+    "previousCode": "HE5200000"
   },
   "IM_MR06": {
     "appName": "견관절 MRI (어깨)",
-    "publicCode": "HE5150000",
-    "publicName": "견관절 MRI",
-    "match": "exact"
+    "publicCode": "HE1150000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-견관절/일반",
+    "match": "exact",
+    "previousCode": "HE5150000"
   },
   "IMAGING_MRI_SHOULDER": {
     "appName": "어깨 MRI",
-    "publicCode": "HE5150000",
-    "publicName": "견관절 MRI",
-    "match": "exact"
+    "publicCode": "HE1150000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-견관절/일반",
+    "match": "exact",
+    "previousCode": "HE5150000"
   },
   "IMAGING_MRI_HIP": {
     "appName": "고관절 MRI",
-    "publicCode": "HE5180000",
-    "publicName": "고관절 MRI",
-    "match": "exact"
+    "publicCode": "HE1180000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-고관절/일반",
+    "match": "exact",
+    "previousCode": "HE5180000"
   },
   "IMAGING_MRI_ANKLE": {
     "appName": "발목 MRI",
-    "publicCode": "HE5210000",
-    "publicName": "발목관절 MRI",
-    "match": "exact"
+    "publicCode": "HE1210000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-발목관절/일반",
+    "match": "exact",
+    "previousCode": "HE5210000"
   },
   "IMAGING_MRI_LOWER_LIMB_OUT_OF_JOINT": {
     "appName": "관절외 하지 MRI",
-    "publicCode": "HE5230000",
-    "publicName": "관절외 하지 MRI",
-    "match": "exact"
+    "publicCode": "HE1230000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-관절외 하지/일반",
+    "match": "exact",
+    "previousCode": "HE5230000"
   },
   "IM_MR01": {
     "appName": "뇌 MRI (비조영)",
-    "publicCode": "HE5010000",
-    "publicName": "뇌 MRI (비조영)",
-    "match": "exact"
+    "publicCode": "HE1010001",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/뇌/일반",
+    "match": "exact",
+    "previousCode": "HE5010000"
   },
   "IMAGING_MRI_BRAIN": {
     "appName": "뇌 MRI (비조영)",
-    "publicCode": "HE5010000",
-    "publicName": "뇌 MRI (비조영)",
-    "match": "exact"
+    "publicCode": "HE1010001",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/뇌/일반",
+    "match": "exact",
+    "previousCode": "HE5010000"
   },
   "IM_MR02": {
     "appName": "뇌 MRI & MRA (조영증강)",
-    "publicCode": "HE5020000",
-    "publicName": "뇌 MRI (조영증강)",
-    "match": "similar"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "MRA가 함께 들어간 항목이라 단일 코드로 맞출 수 없음(뇌 MRI 조영 HE2010001과 MRA는 별도 검사)",
+    "previousCode": "HE5020000"
   },
   "IMAGING_MRI_BRAIN_C": {
     "appName": "뇌 MRI (조영증강)",
-    "publicCode": "HE5020000",
-    "publicName": "뇌 MRI (조영증강)",
-    "match": "exact"
+    "publicCode": "HE2010001",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/뇌/조영제 주입 전·후 촬영 판독",
+    "match": "exact",
+    "previousCode": "HE5020000"
   },
   "IM_MR03": {
     "appName": "경추 MRI (C-spine)",
-    "publicCode": "HE5110000",
-    "publicName": "경추 MRI",
-    "match": "exact"
+    "publicCode": "HE1090000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/척추-경추/일반",
+    "match": "exact",
+    "previousCode": "HE5110000"
   },
   "IMAGING_MRI_C_SPINE": {
     "appName": "경추 MRI",
-    "publicCode": "HE5110000",
-    "publicName": "경추 MRI",
-    "match": "exact"
+    "publicCode": "HE1090000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/척추-경추/일반",
+    "match": "exact",
+    "previousCode": "HE5110000"
   },
   "IM_MR04": {
     "appName": "요추 MRI (L-spine)",
-    "publicCode": "HE5120000",
-    "publicName": "요추 MRI",
-    "match": "exact"
+    "publicCode": "HE1110000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/척추-요천추/일반",
+    "match": "exact",
+    "previousCode": "HE5120000"
   },
   "IMAGING_MRI_L_SPINE": {
     "appName": "요추 MRI",
-    "publicCode": "HE5120000",
-    "publicName": "요추 MRI",
-    "match": "exact"
+    "publicCode": "HE1110000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/척추-요천추/일반",
+    "match": "exact",
+    "previousCode": "HE5120000"
   },
   "IMAGING_MRI_T_SPINE": {
     "appName": "흉추 MRI",
-    "publicCode": "HE5130000",
-    "publicName": "흉추 MRI",
-    "match": "exact"
+    "publicCode": "HE1100000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/척추-흉추/일반",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "HE5130000"
   },
   "IMAGING_MRI_WRIST": {
     "appName": "손목 MRI",
-    "publicCode": "HE5170000",
-    "publicName": "수관절(손목관절) MRI",
-    "match": "exact"
+    "publicCode": "HE1170000",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/근골격계-수관절/일반",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "HE5170000"
   },
   "IMAGING_MRI_ABDOMEN": {
     "appName": "복부 MRI",
-    "publicCode": "HE5310000",
-    "publicName": "복부 MRI",
-    "match": "exact"
+    "publicCode": "HE1270001",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/복부-복부/일반",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "HE5310000"
   },
   "IMAGING_MRI_PELVIS": {
     "appName": "골반 MRI",
-    "publicCode": "HE5320000",
-    "publicName": "골반 MRI",
-    "match": "exact"
+    "publicCode": "HE1280001",
+    "publicName": "자기공명영상진단료(MRI-기본검사)/복부-골반/일반",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "HE5320000"
   },
   "IM_US01": {
     "appName": "상복부 초음파 (간/담낭/췌장/비장)",
-    "publicCode": "EB4110000",
-    "publicName": "상복부 초음파",
-    "match": "exact"
+    "publicCode": "EB4410000",
+    "publicName": "초음파검사료(진단초음파)/복부-복부 초음파/간·담낭·담도·비장·췌장-일반",
+    "match": "similar",
+    "note": "상복부(간·담낭·담도·비장·췌장) 일반·정밀 중 일반 기준",
+    "previousCode": "EB4110000"
   },
   "IMAGING_ULTRASOUND_ABDOMEN": {
     "appName": "복부 초음파",
-    "publicCode": "EB4110000",
-    "publicName": "상복부 초음파",
-    "match": "similar"
+    "publicCode": "EB4410000",
+    "publicName": "초음파검사료(진단초음파)/복부-복부 초음파/간·담낭·담도·비장·췌장-일반",
+    "match": "similar",
+    "note": "복부 초음파 중 상복부(간·담낭·담도·비장·췌장) 일반 기준",
+    "previousCode": "EB4110000"
   },
   "IM_US02": {
     "appName": "하복부/골반 초음파 (방광/여성자궁)",
-    "publicCode": "EB4410000",
-    "publicName": "하복부 초음파",
-    "match": "similar"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "방광과 여성생식기가 섞인 항목이라 단일 코드로 맞출 수 없음(후보: EB4500001 방광, EB4550001 여성생식기 일반)",
+    "previousCode": "EB4410000"
   },
   "IMAGING_ULTRASOUND_OBSTETRIC": {
     "appName": "산부인과 초음파",
-    "publicCode": "EB4410000",
-    "publicName": "하복부 초음파",
-    "match": "similar"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "임산부 초음파(EB5110000 등)와 여성생식기 초음파(EB4550001 등) 중 어느 것인지 정해지지 않음",
+    "previousCode": "EB4410000"
   },
   "IM_US03": {
     "appName": "심장 초음파 (심에코)",
-    "publicCode": "EB4210000",
-    "publicName": "심장 초음파",
-    "match": "exact"
+    "publicCode": "EB4320000",
+    "publicName": "초음파검사료(진단초음파)/심장-경흉부 심초음파/일반",
+    "match": "similar",
+    "note": "경흉부 심초음파 단순·일반·전문 중 일반 기준",
+    "previousCode": "EB4210000"
   },
   "IMAGING_ULTRASOUND_HEART": {
     "appName": "심장 초음파 (심초음파)",
-    "publicCode": "EB4210000",
-    "publicName": "심장 초음파",
-    "match": "exact"
+    "publicCode": "EB4320000",
+    "publicName": "초음파검사료(진단초음파)/심장-경흉부 심초음파/일반",
+    "match": "similar",
+    "note": "경흉부 심초음파 단순·일반·전문 중 일반 기준",
+    "previousCode": "EB4210000"
   },
   "IM_US04": {
     "appName": "갑상선 초음파",
-    "publicCode": "EB4310000",
-    "publicName": "갑상선 초음파",
-    "match": "exact"
+    "publicCode": "EB4140000",
+    "publicName": "초음파검사료(진단초음파)/두경부-경부 초음파/갑상선·부갑상선",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "EB4310000"
   },
   "IMAGING_ULTRASOUND_THYROID": {
     "appName": "갑상선 초음파",
-    "publicCode": "EB4310000",
-    "publicName": "갑상선 초음파",
-    "match": "exact"
+    "publicCode": "EB4140000",
+    "publicName": "초음파검사료(진단초음파)/두경부-경부 초음파/갑상선·부갑상선",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "EB4310000"
   },
   "IM_US05": {
     "appName": "유방 초음파 (양측)",
-    "publicCode": "EB4320000",
-    "publicName": "유방 초음파",
-    "match": "exact"
+    "publicCode": "EB4210000",
+    "publicName": "초음파검사료(진단초음파)/흉부-유방·액와부 초음파/일반",
+    "match": "similar",
+    "note": "유방·액와부 초음파 일반·정밀·자동유방초음파 중 일반 기준",
+    "previousCode": "EB4320000"
   },
   "IMAGING_ULTRASOUND_BREAST": {
     "appName": "유방 초음파",
-    "publicCode": "EB4320000",
-    "publicName": "유방 초음파",
-    "match": "exact"
+    "publicCode": "EB4210000",
+    "publicName": "초음파검사료(진단초음파)/흉부-유방·액와부 초음파/일반",
+    "match": "similar",
+    "note": "유방·액와부 초음파 일반·정밀·자동유방초음파 중 일반 기준",
+    "previousCode": "EB4320000"
   },
   "IM_US06": {
     "appName": "경동맥 초음파",
-    "publicCode": "EB4510000",
-    "publicName": "경동맥 초음파",
-    "match": "exact"
+    "publicCode": "EB4820000",
+    "publicName": "초음파검사료(진단초음파)/혈관-두개외 혈관 도플러 초음파/경동맥",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "EB4510000"
   },
   "IMAGING_ULTRASOUND_CAROTID": {
     "appName": "경동맥 초음파",
-    "publicCode": "EB4510000",
-    "publicName": "경동맥 초음파",
-    "match": "exact"
+    "publicCode": "EB4820000",
+    "publicName": "초음파검사료(진단초음파)/혈관-두개외 혈관 도플러 초음파/경동맥",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "EB4510000"
   },
   "IMAGING_ULTRASOUND_MUSCULO": {
     "appName": "근골격 초음파",
-    "publicCode": "EB4520000",
-    "publicName": "근골격 초음파",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "부위별 코드(EB4610000~EB4710000)가 나뉘어 있어 단일 코드로 맞출 수 없음",
+    "previousCode": "EB4520000"
   },
   "IMAGING_ULTRASOUND_PROSTATE": {
     "appName": "전립선 초음파 (경직장)",
-    "publicCode": "EB4420000",
-    "publicName": "전립선 초음파",
-    "match": "exact"
+    "publicCode": "EB4510001",
+    "publicName": "초음파검사료(진단초음파)/복부-남성생식기 초음파/전립선·정낭",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "EB4420000"
   },
   "IMAGING_ULTRASOUND_RENAL": {
     "appName": "신장/방광 초음파",
-    "publicCode": "EB4430000",
-    "publicName": "신장/방광 초음파",
-    "match": "exact"
+    "publicCode": "EB4480001",
+    "publicName": "초음파검사료(진단초음파)/복부-비뇨기계 초음파/신장·부신·방광",
+    "match": "exact",
+    "note": "코드 확인됨, 지역별 가격은 아직 수집 안 함",
+    "previousCode": "EB4430000"
   },
   "IM_SP01": {
     "appName": "전신 PET-CT (양전자방출단층촬영)",
-    "publicCode": "HZ1110000",
-    "publicName": "전신 PET-CT",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "HZ1110000"
   },
   "IMAGING_PET_CT_WHOLE": {
     "appName": "전신 PET-CT",
-    "publicCode": "HZ1110000",
-    "publicName": "전신 PET-CT",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "HZ1110000"
   },
   "IMAGING_PET_CT_BRAIN": {
     "appName": "뇌 PET-CT",
-    "publicCode": "HZ1120000",
-    "publicName": "뇌 PET-CT",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "HZ1120000"
   },
   "IMAGING_PET_CT_TORSO": {
     "appName": "토르소(몸통) PET-CT",
-    "publicCode": "HZ1130000",
-    "publicName": "토르소 PET-CT",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "HZ1130000"
   },
   "IM_SP02": {
     "appName": "골밀도 검사 (DEXA)",
-    "publicCode": "HC3410000",
-    "publicName": "골밀도 검사",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "HC3410000"
   },
   "IMAGING_DEXA_STD": {
     "appName": "요추 + 대퇴골 (DEXA)",
-    "publicCode": "HC3410000",
-    "publicName": "골밀도 검사",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "HC3410000"
   },
   "EN_SL01": {
     "appName": "수면 위내시경 마취 추가비용",
-    "publicCode": "QZ1110000",
-    "publicName": "수면 위내시경 추가 마취료",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "진정내시경환자관리료 Ⅰ~Ⅳ(EA0010000~EA0040000) 중 위내시경에 해당하는 등급을 공식 정의로 확인 못함",
+    "previousCode": "QZ1110000"
   },
   "ENDOSCOPY_SLEEP_ENDO_GASTRO_SLEEP": {
     "appName": "수면 위내시경 추가",
-    "publicCode": "QZ1110000",
-    "publicName": "수면 위내시경 추가 마취료",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "진정내시경환자관리료 Ⅰ~Ⅳ(EA0010000~EA0040000) 중 위내시경에 해당하는 등급을 공식 정의로 확인 못함",
+    "previousCode": "QZ1110000"
   },
   "EN_SL02": {
     "appName": "수면 대장내시경 마취 추가비용",
-    "publicCode": "QZ1120000",
-    "publicName": "수면 대장내시경 추가 마취료",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "진정내시경환자관리료 Ⅰ~Ⅳ(EA0010000~EA0040000) 중 대장내시경에 해당하는 등급을 공식 정의로 확인 못함",
+    "previousCode": "QZ1120000"
   },
   "ENDOSCOPY_SLEEP_ENDO_COLONO_SLEEP": {
     "appName": "수면 대장내시경 추가",
-    "publicCode": "QZ1120000",
-    "publicName": "수면 대장내시경 추가 마취료",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "진정내시경환자관리료 Ⅰ~Ⅳ(EA0010000~EA0040000) 중 대장내시경에 해당하는 등급을 공식 정의로 확인 못함",
+    "previousCode": "QZ1120000"
   },
   "SU_OP02": {
     "appName": "백내장 수술 (다초점 인공수정체 - 비급여)",
-    "publicCode": "SZ1220000",
-    "publicName": "백내장 다초점 수정체 수술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ1220000"
   },
   "SU_CATARACT_MULTI": {
     "appName": "백내장 수술 (다초점렌즈·비급여)",
-    "publicCode": "SZ1220000",
-    "publicName": "백내장 다초점 수정체 수술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ1220000"
   },
   "SU_LASIK": {
     "appName": "라식/라섹 시력교정 (비급여)",
-    "publicCode": "SZ1300000",
-    "publicName": "시력교정 수술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ1300000"
   },
   "SU_CHOLE_ROBOT": {
     "appName": "담낭절제술 - 로봇 (비급여 포함)",
-    "publicCode": "SZ2100000",
-    "publicName": "로봇 담낭절제술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ2100000"
   },
   "SU_SLEEVE_GASTRECT": {
     "appName": "위소매절제술 (비만수술)",
-    "publicCode": "SZ2200000",
-    "publicName": "비만 치료 수술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ2200000"
   },
   "SU_PROSTAT_ROBOT": {
     "appName": "전립선절제 - 로봇 (비급여 포함)",
-    "publicCode": "SZ3100000",
-    "publicName": "로봇 전립선절제술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ3100000"
   },
   "SU_CIRCUM": {
     "appName": "포경수술 (비급여)",
-    "publicCode": "SZ3200000",
-    "publicName": "포경 수술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ3200000"
   },
   "SU_BLEPHAROPLASTY": {
     "appName": "쌍꺼풀 수술 (비급여·미용)",
-    "publicCode": "SZ4100000",
-    "publicName": "쌍꺼풀 수술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ4100000"
   },
   "SU_RHINOPLASTY": {
     "appName": "코 성형 (비급여·미용)",
-    "publicCode": "SZ4200000",
-    "publicName": "코 성형술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ4200000"
   },
   "SU_LIPOSUCTION": {
     "appName": "지방흡입술 (비급여·미용)",
-    "publicCode": "SZ4300000",
-    "publicName": "지방흡입술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ4300000"
   },
   "SU_DE05": {
     "appName": "임플란트 식립 수술 (1개당 비급여 기준)",
-    "publicCode": "SZ5100000",
-    "publicName": "치과 임플란트",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "치과임플란트(1치당)는 재료별 코드(UB0010001~UB0010051)로 나뉘어 하나를 고를 수 없음",
+    "previousCode": "SZ5100000"
   },
   "SU_IMPLANT": {
     "appName": "임플란트 (비급여)",
-    "publicCode": "SZ5100000",
-    "publicName": "치과 임플란트",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "치과임플란트(1치당)는 재료별 코드(UB0010001~UB0010051)로 나뉘어 하나를 고를 수 없음",
+    "previousCode": "SZ5100000"
   },
   "SU_DE06": {
     "appName": "치과 크라운 보철치료 (골드/지르코니아)",
-    "publicCode": "SZ5200000",
-    "publicName": "치과 보철 크라운",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ5200000"
   },
   "SU_CROWN": {
     "appName": "크라운 (보철, 비급여)",
-    "publicCode": "SZ5200000",
-    "publicName": "치과 보철 크라운",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ5200000"
   },
   "SU_ORTHO": {
     "appName": "치과 교정 (비급여)",
-    "publicCode": "SZ5300000",
-    "publicName": "치과 부정교합 교정",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ5300000"
   },
   "SU_INLAY": {
     "appName": "인레이/온레이 (비급여)",
-    "publicCode": "SZ5400000",
-    "publicName": "치과 인레이/온레이",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "SZ5400000"
   },
   "PR_PROTON": {
     "appName": "양성자치료 (1회, 비급여)",
-    "publicCode": "RZ1100000",
-    "publicName": "양성자 방사선치료",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "RZ1100000"
   },
   "PR_KM04": {
     "appName": "한방 약침 치료 (비급여 1회)",
-    "publicCode": "MZ1110000",
-    "publicName": "한방 약침술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "MZ1110000"
   },
   "PR_PHARMACOPUNCT": {
     "appName": "약침 (비급여)",
-    "publicCode": "MZ1110000",
-    "publicName": "한방 약침술",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "MZ1110000"
   },
   "PR_KM05": {
     "appName": "한방 한약 처방 (첩약 1일 기준 비급여)",
-    "publicCode": "MZ1210000",
-    "publicName": "한방 첩약(한약)",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "MZ1210000"
   },
   "PR_HERBAL": {
     "appName": "한약 처방 (비급여·1일)",
-    "publicCode": "MZ1210000",
-    "publicName": "한방 첩약(한약)",
-    "match": "exact"
+    "publicCode": null,
+    "publicName": null,
+    "match": "unverified",
+    "note": "심평원 코드 목록에서 아직 확인하지 않음(기존 코드는 근거 없음)",
+    "previousCode": "MZ1210000"
   }
 }

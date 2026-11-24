@@ -7,6 +7,17 @@
 - 이전 작업 기록은 `docs/TASK_HISTORY.md`에 보관한다.
 - 상태 표기: `[ ]` 미완료, `[/]` 진행 중, `[x]` 완료
 
+## 현재 작업: 2026-11-16 주간 무결과 검색어 정리
+
+절차서: `docs/weekly-unmatched-routine.md`. 상세 기록: `docs/TASK_HISTORY.md` 2026-11-16 항목.
+
+## 작업 범위
+
+- [x] pending 2건 분류: `해열제` 제외(약품 분류명), `두통 수액` 질문(C)
+- [x] SQL·테스트 작성, 전체 테스트 통과, 백업 → 미리 실행 → 운영 D1 반영(해열제 rejected)
+- [x] 사용자 답변(2026-11-16 '제외')대로 `두통 수액` 제외 반영: 백업 → 미리 실행 → 운영 D1 적용. pending 0
+- [x] commit (2026-11-24 사용자 승인): `TASKS.md`, `docs/TASK_HISTORY.md`, `database/search-aliases-2026-11-16.sql`, `tests/unmatched_search_aliases.test.js`
+
 ## 현재 작업: 2026-11-22 AdSense 심사 준비 (branch `claude/adsense-readiness`)
 
 상세 기록·광고 복구 방법: `docs/TASK_HISTORY.md` 2026-11-22 항목.

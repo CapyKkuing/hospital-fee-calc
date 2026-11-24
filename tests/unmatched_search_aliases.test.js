@@ -266,4 +266,24 @@ assert.strictEqual(nov11Count('approved'), 2, '요소검사 승인 행은 2건�
 assert.strictEqual(nov11Db.prepare('SELECT COUNT(*) AS n FROM medical_items').get().n, 0, '정적 수가 코드라 medical_items overlay를 만들지 않아야 합니다.');
 assert(!/DELETE\s+FROM|DROP\s|ALTER\s|INSERT\s+INTO\s+medical_items/i.test(nov11Sql.replace(/^--.*$/gm, '')), '11-11 SQL은 DELETE·DROP·ALTER·medical_items 입력을 쓰면 안 됩니다.');
 
+// 2026-11-16: 해열제(약품 분류명) 제외, 두통 수액은 후보 코드가 여러 개라 질문 후 사용자 답변('제외')대로 제외.
+const nov16Sql = fs.readFileSync(path.join(root, 'database', 'search-aliases-2026-11-16.sql'), 'utf8');
+const nov16Db = new DatabaseSync(':memory:');
+nov16Db.exec(schemaSql);
+nov16Db.exec(`
+  INSERT INTO search_candidates (query, normalized_query, item_id, item_name, item_category, status)
+  VALUES ('두통 수액', '두통 수액', NULL, '두통 수액', NULL, 'pending'),
+         ('해열제', '해열제', NULL, '해열제', NULL, 'pending');
+`);
+nov16Db.exec(nov16Sql);
+nov16Db.exec(nov16Sql);
+const nov16Row = (query) => ({ ...nov16Db.prepare(
+    'SELECT status, item_id FROM search_candidates WHERE normalized_query = ?'
+).get(query) });
+assert.deepStrictEqual(nov16Row('해열제'), { status: 'rejected', item_id: null }, '해열제는 약품 분류명이라 rejected 여야 합니다.');
+assert.deepStrictEqual(nov16Row('두통 수액'), { status: 'rejected', item_id: null }, '두통 수액은 사용자 답변대로 rejected 여야 합니다.');
+assert.strictEqual(nov16Db.prepare('SELECT COUNT(*) AS n FROM search_candidates').get().n, 2, '11-16 SQL은 행을 추가하면 안 됩니다.');
+assert.strictEqual(nov16Db.prepare("SELECT COUNT(*) AS n FROM search_candidates WHERE status = 'approved'").get().n, 0, '이번 회차는 승인(A)이 없어야 합니다.');
+assert(!/DELETE\s+FROM|DROP\s|ALTER\s|INSERT\s+INTO/i.test(nov16Sql.replace(/^--.*$/gm, '')), '11-16 SQL은 DELETE·DROP·ALTER·INSERT를 쓰면 안 됩니다.');
+
 console.log('PASS: 무결과 검색어 공식 수가·가산형 별칭·보류 경계');
